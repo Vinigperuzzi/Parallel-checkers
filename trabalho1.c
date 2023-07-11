@@ -45,14 +45,41 @@ Board createBoard(){
     return board;
 }
 
-void printBoard(Board board){
+char parseIntToChar(int valor){
+    switch(valor){
+        case 0:
+            return 'A';
+        case 1:
+            return 'B';
+        case 2:
+           return 'C';
+        case 3:
+            return 'D';
+        case 4:
+            return 'E';
+        case 5:
+            return 'F';
+        case 6:
+            return 'G';
+        case 7:
+            return 'H';
+        default:
+            return 'Z';
+        }
+}
+
+void printBoard(Board board, int option){ //(1 to print index, 2 to print square names)
     system("clear || cls");
     for(int i = 7; i>=0; i--){
         printf("\t\t\t");
         for (int j = 0; j < 8; j++){
             printf("\033[0;32m");
-            printf(board.casa[(i*8)+j].color);
-            printf("%d%d", board.casa[(i*8)+j].position.row, board.casa[(i*8)+j].position.col);
+            printf("%s", board.casa[(i*8)+j].color);
+            if (option == 1){
+                printf("%d%d", board.casa[(i*8)+j].position.row, board.casa[(i*8)+j].position.col);
+            } else {
+                printf("%c%d", parseIntToChar(board.casa[(i*8)+j].position.col), board.casa[(i*8)+j].position.row + 1);
+            }
             printf("\033[0;37m");
         }
         printf("\n");
@@ -62,5 +89,7 @@ void printBoard(Board board){
 
 int main (void){
     Board board = createBoard();
-    printBoard(board);
+    printBoard(board, 1);
+    getchar();
+    printBoard(board, 2);
 }
