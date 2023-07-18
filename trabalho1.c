@@ -1,20 +1,24 @@
+//////////////// -- INCLUDE's -- ////////////////
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 
-#define SQUARES_PER_ROW 8
-#define TOTAL_SQUARES SQUARES_PER_ROW*SQUARES_PER_ROW
+//////////////// -- DEFINE's -- ////////////////
 
-char whiteSquare[9] = "\033[47m";
-char blackSquare[9] = "\033[40m";
+#define SQUARES_PER_ROW 8
+#define TOTAL_SQUARES SQUARES_PER_ROW * SQUARES_PER_ROW
+#define PIECES_PER_PLAYER 12
+#define TOTAL_PIECES PIECES_PER_PLAYER * 2
+
+//////////////// -- DATA TYPE's -- ////////////////
 
 typedef struct STPosition{
     int col;
     int row;
 } Position;
 
-enum PieceType {Standard, King};
-enum PieceState {Dead, Alive};
+enum PieceType {Checker, King};
 enum PieceColor {White, Black};
 
 typedef struct STPiece{
@@ -22,7 +26,6 @@ typedef struct STPiece{
     Position position;
     enum PieceColor color;
     enum PieceType type;
-    enum PieceState state;
 } Piece;
 
 enum SquareState {Free, Occupied};
@@ -30,13 +33,15 @@ enum SquareState {Free, Occupied};
 typedef struct STSquare{
     Position position;
     Piece piece;
-    char color[9]; //(0 == brancas, 1 == negras)
+    char color[9]; //(0 == white, 1 == black)
     int id;
     enum SquareState state;
 } Square;
 
 typedef struct STBoard{
     Square square[TOTAL_SQUARES];
+    int whitePieces;
+    int blackPieces;
 } Board;
 
 typedef struct STMovement{
@@ -58,6 +63,18 @@ enum MovementType {
     Attack          
 };
 
+//////////////// -- GLOBAL VAR's -- ////////////////
+
+char whiteSquare[9] = "\033[47m";
+char blackSquare[9] = "\033[40m";
+enum PieceColor turn = White;
+
+//////////////// -- FUNCTION's -- ////////////////
+
+int getIndexOfPosition(Position position){
+    return position.row * SQUARES_PER_ROW + position.col;
+}
+
 Board createBoard(){
     Board board;
 
@@ -69,24 +86,28 @@ Board createBoard(){
             board.square[(SQUARES_PER_ROW*i)+j].piece.id = 0;
             board.square[(SQUARES_PER_ROW*i)+j].state = Free;
             if ((i+j)%2 == 0){
-                strcpy(board.square[(i*SQUARES_PER_ROW)+j].color, blackSquare); //Brancas
+                strcpy(board.square[(i*SQUARES_PER_ROW)+j].color, blackSquare); //White
             } else{
                 strcpy(board.square[(i*SQUARES_PER_ROW)+j].color, whiteSquare);
             }
         }
     }
+
+    board.blackPieces = PIECES_PER_PLAYER;
+    board.whitePieces = PIECES_PER_PLAYER;
     return board;
 }
 
 
 char parseIntToChar(int valor){
-    if(valor >= 0 && valor < SQUARES_PER_ROW)
+    if(valor >= 0 && valor < SQUARES_PER_ROW){
         return 'A' + valor;
-    else
+    } else {
         return '@';
+    }
 }
 
-int parseCharToInt(char character, int option){     //(0 to convert letters (a-h), 1 to convert numbers 0-7)
+int parseCharToInt(char character, int option){     //(0 to convert letters (a-z), 1 to convert numbers 0-9)
     if(option == 0){
         int charToInt = character - 'a';
         if(charToInt >=0 && charToInt < SQUARES_PER_ROW){
@@ -116,9 +137,17 @@ void printBoard(Board board, int option){ //(1 to print index, 2 to print square
                     printf("  ");
                 } else {
                     if (board.square[(i*SQUARES_PER_ROW)+j].piece.color == 0){
-                        printf("🪲 ");
+                        if(board.square[(i*SQUARES_PER_ROW)+j].piece.type == Checker){
+                            printf("🪲 ");
+                        } else{
+                            printf("🐛");
+                        }
                     } else {
-                        printf("🐞");
+                        if(board.square[(i*SQUARES_PER_ROW)+j].piece.type == Checker){
+                            printf("🐞");
+                        } else{
+                            printf("🐙");
+                        }
                     }
                 }
             } else if (option == 1){
@@ -140,8 +169,7 @@ Board setPieces(Board board){
                 board.square[(i*SQUARES_PER_ROW)+j].state = Occupied;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.color = 0;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.id = id++;
-                board.square[(i*SQUARES_PER_ROW)+j].piece.state = Alive;
-                board.square[(i*SQUARES_PER_ROW)+j].piece.type = Standard;
+                board.square[(i*SQUARES_PER_ROW)+j].piece.type = Checker;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.position.col = board.square[(i*SQUARES_PER_ROW)+j].position.col;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.position.row = board.square[(i*SQUARES_PER_ROW)+j].position.row;
             }
@@ -153,8 +181,7 @@ Board setPieces(Board board){
                 board.square[(i*SQUARES_PER_ROW)+j].state = Occupied;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.color = 1;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.id = id++;
-                board.square[(i*SQUARES_PER_ROW)+j].piece.state = Alive;
-                board.square[(i*SQUARES_PER_ROW)+j].piece.type = Standard;
+                board.square[(i*SQUARES_PER_ROW)+j].piece.type = Checker;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.position.col = board.square[(i*SQUARES_PER_ROW)+j].position.col;
                 board.square[(i*SQUARES_PER_ROW)+j].piece.position.row = board.square[(i*SQUARES_PER_ROW)+j].position.row;
             }
@@ -163,19 +190,53 @@ Board setPieces(Board board){
     return board;
 }
 
+int checkKingTurningCondition(Board board, Position destiny, Piece piece){
+    if(piece.type == King){
+        return 0;
+    }
+
+    if(destiny.row == SQUARES_PER_ROW - 1 && piece.color == White){
+        return 1;
+    } else if(destiny.row == 0 && piece.color == Black){
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+Board turnKing(Board board, Piece piece){
+    int index = getIndexOfPosition(piece.position);
+    board.square[index].piece.type = King;
+
+    return board;
+}
+
+void swapTurn(){
+    if(turn){
+        turn = White;
+    } else {
+        turn = Black;
+    }
+}
+
 Board movePiece(Board board, Movement move){
-    Piece piece;
+    Piece pieceAux;
     int index;
 
-    index = move.origin.row * SQUARES_PER_ROW + move.origin.col;
-    piece = board.square[index].piece;
+    index = getIndexOfPosition(move.origin);
+    pieceAux = board.square[index].piece;
     board.square[index].piece.id = 0;
     board.square[index].state = Free;
 
-    index = move.destiny.row * SQUARES_PER_ROW + move.destiny.col;
-    board.square[index].piece = piece;
+    index = getIndexOfPosition(move.destiny);
+    board.square[index].piece = pieceAux;
     board.square[index].state = Occupied;
 
+    if(checkKingTurningCondition(board, move.destiny, pieceAux)){
+        board = turnKing(board, pieceAux);
+    }
+
+    swapTurn();
     return board;
 }
 
@@ -239,7 +300,7 @@ Movement getMovementFromUser(){
 }
 
 int hasPiece(Board board, Position position){
-    return board.square[position.row * SQUARES_PER_ROW + position.col].state;
+    return board.square[getIndexOfPosition(position)].state;
 }
 
 enum Adjacency isAdjacent(Position origin, Position destiny){     
@@ -261,7 +322,7 @@ enum Adjacency isAdjacent(Position origin, Position destiny){
 }
 
 Piece getPiece(Board board, Position position){
-    return board.square[position.row * SQUARES_PER_ROW + position.col].piece;
+    return board.square[getIndexOfPosition(position)].piece;
 }
 
 PathInfo getPathInfo(Board board, Position origin, Position destiny){
@@ -331,21 +392,25 @@ int isDiagonal(Position origin, Position destiny){
     return abs(origin.row - destiny.row) == abs(origin.col - destiny.col);
 }
 
-enum MovementType checkMovement(Board board, Position origin, Position destiny){
-    if(!(hasPiece(board, origin) && !hasPiece(board, destiny) && isDiagonal(origin, destiny))){
+enum MovementType checkMovement(Board board, Movement move){
+
+    if(!(hasPiece(board, move.origin) &&                                    //checks if the origin position has a piece,
+    !hasPiece(board, move.destiny) &&                                       //if the destiy position is free
+    isDiagonal(move.origin, move.destiny) &&                                //if the destiny position is diagonal in relation to destiny's
+    turn == board.square[getIndexOfPosition(move.origin)].piece.color)){    //and if is the turn of the piece in origin to play
         return Invalid;
     }
 
-    Piece pieceMoving = getPiece(board, origin);
-    PathInfo pathInfo = getPathInfo(board, origin, destiny);
+    Piece pieceMoving = getPiece(board, move.origin);
+    PathInfo pathInfo = getPathInfo(board, move.origin, move.destiny);
 
     switch (pieceMoving.type)
     {
-    case Standard:
+    case Checker:
         if(pathInfo.distance > 1){
             if(pathInfo.piecesInTheWay == 1 && pathInfo.lastPieceColor == !pieceMoving.color){  // Exists a piece in the way of the enemy Color
                     return Attack;
-            } else {        // Tryng to attack friendly color or trying to move more than 1 house using a Standard piece
+            } else {        // Tryng to attack friendly color or trying to move more than 1 house using a Checker piece
                     return Invalid;
             }
         } else {
@@ -368,6 +433,20 @@ enum MovementType checkMovement(Board board, Position origin, Position destiny){
     default:
         break;
     }
+}
+
+Board killPiece(Board board, Piece piece){
+    int index = getIndexOfPosition(piece.position);
+    board.square[index].piece.id = 0;
+    board.square[index].state = Free;
+
+    if(piece.color == White){
+        board.whitePieces--;
+    } else {
+        board.blackPieces--;
+    }
+
+    return board;
 }
 
 int main (void){
@@ -393,7 +472,7 @@ int main (void){
 
     while(1){
         move = getMovementFromUser();
-        if(checkMovement(board, move.origin, move.destiny) != Invalid){
+        if(checkMovement(board, move) != Invalid){
             board = movePiece(board, move);
             printBoard(board, 0);
         } else {
