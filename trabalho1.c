@@ -52,7 +52,7 @@ typedef struct STMovement{
 typedef struct STPathInfo{
     int piecesInTheWay;
     int distance;
-    enum PieceColor lastPieceColor; //Color of the last piece on the way
+    Piece lastPieceInTheWay;
 } PathInfo;
 
 enum Adjacency {NotAdjacent, AdjacentFront, AdjacentBack};
@@ -125,7 +125,7 @@ int parseCharToInt(char character, int option){     //(0 to convert letters (a-z
     }
 }
 
-void printBoard(Board board, int option){ //(1 to print index, 2 to print square names)
+void printBoard(Board board, int option){ //(1 to print index, 2 to print square names, 3 to print index)
     system("clear || cls");
     for(int i = SQUARES_PER_ROW - 1; i>=0; i--){
         printf("\t\t\t");
@@ -152,7 +152,14 @@ void printBoard(Board board, int option){ //(1 to print index, 2 to print square
                 }
             } else if (option == 1){
                 printf("%d%d", board.square[(i*SQUARES_PER_ROW)+j].position.row, board.square[(i*SQUARES_PER_ROW)+j].position.col);
-            } else {
+            } else if (option == 3){
+                 if((i*SQUARES_PER_ROW+j) < 10){
+                    printf("0%d",(i*SQUARES_PER_ROW+j));
+                 } else {
+                    printf("%d",(i*SQUARES_PER_ROW+j));
+                 }
+            }
+            else {
                 printf("%c%d", parseIntToChar(board.square[(i*SQUARES_PER_ROW)+j].position.col), board.square[(i*SQUARES_PER_ROW)+j].position.row + 1);
             }
             printf("\033[0;37m");
@@ -230,10 +237,11 @@ Board movePiece(Board board, Movement move){
 
     index = getIndexOfPosition(move.destiny);
     board.square[index].piece = pieceAux;
+    board.square[index].piece.position = board.square[index].position;
     board.square[index].state = Occupied;
 
     if(checkKingTurningCondition(board, move.destiny, pieceAux)){
-        board = turnKing(board, pieceAux);
+        board = turnKing(board, board.square[index].piece);
     }
 
     swapTurn();
@@ -327,13 +335,12 @@ Piece getPiece(Board board, Position position){
 
 PathInfo getPathInfo(Board board, Position origin, Position destiny){
     PathInfo pathInfo;
-    int piecesInTheWay = 0;
-    enum PieceColor lastPieceColor;
+    pathInfo.piecesInTheWay = 0;
+    Piece lastPieceInTheWay;
     int distanceMovedRow = origin.row - destiny.row;
     int distanceMovedCol = origin.col - destiny.col;
 
     Position position = origin;
-    Piece piece;
     
     if(distanceMovedRow > 0){
         if(distanceMovedCol > 0){
@@ -341,9 +348,8 @@ PathInfo getPathInfo(Board board, Position origin, Position destiny){
                 position.row--;
                 position.col--;
                 if(hasPiece(board, position)){
-                    piece = getPiece(board, position);
-                    piecesInTheWay++;
-                    lastPieceColor = piece.color;
+                    pathInfo.lastPieceInTheWay = getPiece(board, position);
+                    pathInfo.piecesInTheWay++;
                 }
             }
         } else {
@@ -351,9 +357,8 @@ PathInfo getPathInfo(Board board, Position origin, Position destiny){
                 position.row--;
                 position.col++;
                 if(hasPiece(board, position)){
-                    piece = getPiece(board, position);
-                    piecesInTheWay++;
-                    lastPieceColor = piece.color;
+                    pathInfo.lastPieceInTheWay = getPiece(board, position);
+                    pathInfo.piecesInTheWay++;
                 }
             }
         }
@@ -363,9 +368,8 @@ PathInfo getPathInfo(Board board, Position origin, Position destiny){
                 position.row++;
                 position.col--;
                 if(hasPiece(board, position)){
-                    piece = getPiece(board, position);
-                    piecesInTheWay++;
-                    lastPieceColor = piece.color;
+                    pathInfo.lastPieceInTheWay = getPiece(board, position);
+                    pathInfo.piecesInTheWay++;
                 }
             }
         } else {
@@ -373,18 +377,14 @@ PathInfo getPathInfo(Board board, Position origin, Position destiny){
                 position.row++;
                 position.col++;
                 if(hasPiece(board, position)){
-                    piece = getPiece(board, position);
-                    piecesInTheWay++;
-                    lastPieceColor = piece.color;
+                    pathInfo.lastPieceInTheWay = getPiece(board, position);
+                    pathInfo.piecesInTheWay++;
                 }
             }
         }
     }
 
     pathInfo.distance = abs(distanceMovedRow);
-    pathInfo.lastPieceColor = lastPieceColor;
-    pathInfo.piecesInTheWay = piecesInTheWay;
-
     return pathInfo;
 }
 
@@ -408,7 +408,7 @@ enum MovementType checkMovement(Board board, Movement move){
     {
     case Checker:
         if(pathInfo.distance > 1){
-            if(pathInfo.piecesInTheWay == 1 && pathInfo.lastPieceColor == !pieceMoving.color){  // Exists a piece in the way of the enemy Color
+            if(pathInfo.piecesInTheWay == 1 && pathInfo.lastPieceInTheWay.color == !pieceMoving.color){  // Exists a piece in the way of the enemy Color
                     return Attack;
             } else {        // Tryng to attack friendly color or trying to move more than 1 house using a Checker piece
                     return Invalid;
@@ -419,7 +419,7 @@ enum MovementType checkMovement(Board board, Movement move){
         break;
     case King:
         if(pathInfo.piecesInTheWay == 1){
-            if(pathInfo.lastPieceColor == !pieceMoving.color){   // Exists a piece in the way of the enemy Color
+            if(pathInfo.lastPieceInTheWay.color == !pieceMoving.color){   // Exists a piece in the way of the enemy Color
                 return Attack;
             } else {            // Tryng to attack friendly color
                 return Invalid;
@@ -449,6 +449,36 @@ Board killPiece(Board board, Piece piece){
     return board;
 }
 
+void beginAttackChain(){
+    
+}
+
+void playGame(Board board){
+    Movement move;
+    enum MovementType moveType;
+
+    while(1){
+        move = getMovementFromUser();
+        moveType = checkMovement(board, move);
+
+        switch (moveType)
+        {
+        case Move:
+            board = movePiece(board, move);
+            printBoard(board, 0);
+            break;
+        case Attack:
+            // todo
+            break;
+        case Invalid:
+            printf("\n\t\t\tThis movement is not allowed. Try another one.");
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 int main (void){
     Board board = createBoard();
     board = setPieces(board);
@@ -456,27 +486,23 @@ int main (void){
     getchar();
     printBoard(board, 2);
     getchar();
+    printBoard(board, 3);
+    getchar();
     printBoard(board, 0);
     getchar();
     printBoard(board, 0);
 
-    // while(ini.row != 9){
-    //     printf("\n\n\t\t\tQual movimento você gostaria de fazer I.E.(a1 b2): ");
-    //     scanf("%1d%1d %1d%1d", &ini.row, &ini.col, &fin.row, &fin.col);
-    //     board = movePiece(board, ini, fin);
-    //     printBoard(board, 0);
-    //     printf("\n\n\t\t\tA ideia é movimentar %d%d para %d%d\n\n", ini.row, ini.col, fin.row, fin.col);
-    // }
+    Position position = {4, 6};
 
-    Movement move;
+    board.square[getIndexOfPosition(position)].piece.color = White;
 
-    while(1){
-        move = getMovementFromUser();
-        if(checkMovement(board, move) != Invalid){
-            board = movePiece(board, move);
-            printBoard(board, 0);
-        } else {
-            printf("\n\t\t\tThis movement is not allowed. Try another one.");
-        }
-    }
+    position.col = 5;
+    position.row = 7;
+
+    board.square[getIndexOfPosition(position)].piece.id = 0;
+    board.square[getIndexOfPosition(position)].state = Free;
+
+    printBoard(board, 0);
+
+    playGame(board);
 }
