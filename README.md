@@ -26,6 +26,7 @@ If you do not have python installed and do not have de knowledge to setup the en
 All you have to do is two simple commands:
 
 >chmod +x SetupProjectEnv.sh
+-
 >source SetupProjectenv.sh
 
 The first one is to set permission to run as program and the second is to run it, just like ./bash.sh, but wit source you force the changes to occur in the open terminal.
