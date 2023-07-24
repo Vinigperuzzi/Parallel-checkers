@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -fPIC
 LIBNAME = lib.so
 SRC = lib.c
 PYCODE = damas.py

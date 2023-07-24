@@ -34,7 +34,7 @@ All you have to do is two simple commands:
 >chmod +x SetupProjectEnv.sh<br>
 >source SetupProjectenv.sh
 
-The first one is to set permission to run as program and the second is to run it, just like ./bash.sh, but wit source you force the changes to occur in the open terminal.<br>
+The first one is to set permission to run as program and the second is to run it, just like ./bash.sh, but with source you force the changes to occur in the open terminal.<br>
 
 # What this bash.sh does?
 This bash will install a lot of stuff.<br>
