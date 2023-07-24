@@ -7,7 +7,7 @@ This project is proposed by professor Gerson Cavalheiro and developed by the stu
 
 By yourself or automatically:
 
-By yourself
+By yourself:
 
 All you need is python in a version that has pip, or at least have pip installed aside.<br>
 For more compatibility we recommend set the python version for 3.11.0, although python is backwards compatible.
