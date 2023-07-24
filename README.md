@@ -1,10 +1,13 @@
 # IPPD (Introdução ao processamento paralelo e distribuído)
 
 This repository has been created to contain the project of the IPPD class in the course of computing science in UFPel.
-This project is proposed by professor Gerson Cavalheiro and developed by the students Allan N. Schuch andf Vinícius G Peruzzi
+This project is proposed by professor Gerson Cavalheiro and developed by the students Allan N. Schuch andf Vinícius G Peruzzi.
 
-#How to run the project
+# How to run the project
 
+By yourself or automatically:
+
+By yourself
 All you need is python in a version that has pip, or at least have pip installed aside.
 For more compatibility we recommend set the python version for 3.11.0, although python is backwards compatible.
 
@@ -22,6 +25,7 @@ And then run the Chekers.py:
 
 # ------------------------------------------------------------
 
+Automatically:
 If you do not have python installed and do not have de knowledge to setup the environment, we have a bash.sh file that do it for you
 All you have to do is two simple commands:
 
