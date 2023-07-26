@@ -1,3 +1,6 @@
+//Esse código é só um exemplo de como receber os dados, como manipular e como retornar
+//ele não faz nada além de trocar as peças brancas pelas negras
+
 #include <stdio.h>
 
 int entryPoint(int board[8][8], int qtd, int list_moves[qtd]) {
