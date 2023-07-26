@@ -57,3 +57,5 @@ dkms.conf
 !*.md
 !Makefile
 !*.sh
+!*.png
+!*.py
