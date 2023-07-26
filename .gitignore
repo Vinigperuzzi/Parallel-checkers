@@ -59,3 +59,4 @@ dkms.conf
 !*.sh
 !*.png
 !*.py
+!*.txt
