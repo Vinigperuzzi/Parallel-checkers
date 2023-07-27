@@ -8,6 +8,7 @@ import numpy as np
 # Creation of matrice 8x8 board position
 board_pos = [[0 for _ in range(8)] for _ in range(8)]
 board_pos_show = [[0 for _ in range(8)] for _ in range(8)]
+board_pos_send = [[0 for _ in range(8)] for _ in range(8)]
 
 # Data struct to mantain the moves
 qtd_moves = 0
@@ -68,6 +69,7 @@ def submit_move():
     print("Submeter Jogada")
     global qtd_moves, list_of_moves
     print(list_of_moves)
+    print(board_pos)
     test = entryPoint()
     if not test:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
@@ -133,9 +135,14 @@ def print_board():
                 label_piece.bind("<Button-1>", print_coordinates)
 
 def entryPoint():
-    global board_pos, list_of_moves, qtd_moves
+    global board_pos, board_pos_send ,list_of_moves, qtd_moves
+    for i in range(8):
+        for j in range(8):
+            board_pos_send[i][7-j] = board_pos[i][j]
+
+    print("Board_pos_send:\n\n", board_pos_send)
     # Convert the matrice Python for NumPy array
-    board_np = np.array(board_pos, dtype=np.int32)
+    board_np = np.array(board_pos_send, dtype=np.int32)
     '''Como uma matriz em python é uma lista de listas, para ser reconhecida pelo C, é necessário converter
     essa estrutura para um array de arrays, que é reconhecido de forma diferente pelo C.
     O argumento np.int32 força que o array NumPy tenha o tipo de inteiros de 32 bits, que é o mesmo tipo
@@ -162,7 +169,7 @@ def entryPoint():
     # Parse the matrix send to C back to list pf lists in python
     for i in range(8):
         for j in range(8):
-            board_pos[i][j] = board_c[i][j]
+            board_pos[i][7-j] = board_c[i][j]
     qtd_moves = 0
     list_of_moves.clear()
     return test
