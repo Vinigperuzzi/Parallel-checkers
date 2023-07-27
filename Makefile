@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -fPIC
 LIBNAME = lib.so
-SRC = lib.c
+SRC = checkers.c
 PYCODE = damas.py
 
 

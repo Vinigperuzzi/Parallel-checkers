@@ -68,7 +68,7 @@ def submit_move():
     print("Submeter Jogada")
     global qtd_moves, list_of_moves
     test = entryPoint()
-    if test:
+    if not test:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
     else:
         status_label.config(text="Jogada registrada", fg="green")  # Update the status label text
