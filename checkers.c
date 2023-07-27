@@ -1144,6 +1144,7 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
 int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens])
 {
     Board board = parseBoardFromMatrix(matrixBoard);
+    printBoard(&board, 0);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
     enum MovementType moveType;
 
