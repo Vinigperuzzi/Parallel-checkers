@@ -67,6 +67,7 @@ def define_initial_pos():
 def submit_move():
     print("Submeter Jogada")
     global qtd_moves, list_of_moves
+    print(list_of_moves)
     test = entryPoint()
     if not test:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
@@ -78,14 +79,15 @@ def print_coordinates(event):
     global qtd_moves, list_of_moves
     widget = event.widget
     if isinstance(widget, tk.Label):  # Verify if a piece has been clicked or a square
-        col, row = str(7 - int(widget.master.grid_info()["column"])), str(7 - int(widget.master.grid_info()["row"]))
+        col, row = widget.master.grid_info()["column"], str(7 - int(widget.master.grid_info()["row"]))
         print(f"Coordenadas da peça: {col}{row}")
         list_of_moves.append(row); list_of_moves.append(col)
     else:
-        col, row = str(7 - int(widget.grid_info()["column"])), str(7 - int((widget.grid_info()["row"])))
+        col, row = widget.grid_info()["column"], str(7 - int((widget.grid_info()["row"])))
         print(f"Coordenadas da square: {col}{row}")
         list_of_moves.append(row); list_of_moves.append(col)
     status_label.config(text="Faça sua jogada", fg="black")  # Update the status label text
+    print(col, row)
 
 # Function that create the colored squares and set png for pieces
 pieces_size = 63
