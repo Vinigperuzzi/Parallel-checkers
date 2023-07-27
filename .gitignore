@@ -60,3 +60,5 @@ dkms.conf
 !*.png
 !*.py
 !*.txt
+!*.h
+!Makefile2

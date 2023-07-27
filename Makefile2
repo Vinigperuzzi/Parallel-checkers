@@ -1,0 +1,22 @@
+LIB_NAME = lib
+SRC = lib.c
+HEADER = lib.h
+
+RM = rm -f
+
+ifeq ($(OS),Windows_NT)
+	CC = gcc
+	CFLAGS = -Wall -Wextra -shared -o $(LIB_NAME).dll
+else
+	CC = gcc
+	CFLAGS = -Wall -Wextra -shared -fPIC -o $(LIB_NAME).so
+endif
+
+all: $(LIB_NAME)
+
+$(LIB_NAME): $(SRC) $(HEADER)
+	$(CC) $(CFLAGS) $(SRC)
+	@echo "Lib compilada com sucesso, você pode rodar o programa com >python damas.py."
+	
+clean:
+	$(RM) $(LIB_NAME).so $(LIB_NAME).dll
