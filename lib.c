@@ -21,7 +21,7 @@ int entryPoint(int board[8][8], int qtd, int list_moves[qtd]) {
     printf("\n\n");
 
     int qtd_local = 0;
-    int cor = board[qtd_local][qtd_local+1];
+    int cor = board[list_moves[qtd_local]][list_moves[qtd_local+1]];
     while (qtd_local < qtd){
         board[list_moves[qtd_local]][list_moves[qtd_local+1]] = 0;
         board[list_moves[qtd_local+2]][list_moves[qtd_local+3]] = cor;

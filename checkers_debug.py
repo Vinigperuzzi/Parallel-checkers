@@ -38,6 +38,8 @@ def set_initial_pos():
             else:
                 board_pos[i][j] = 0
 
+    board_pos[3][3] = 3
+    board_pos[4][4] = 4
     print(board_pos)
 
 def set_pos_show():
@@ -105,6 +107,8 @@ pieces_size = 63
 pieces = {
     "black_piece": Image.open(os.path.join(path_project, "black_piece.png")).resize((pieces_size, pieces_size)),
     "white_piece": Image.open(os.path.join(path_project, "white_piece.png")).resize((pieces_size, pieces_size)),
+    "black_king": Image.open(os.path.join(path_project, "black_king.png")).resize((pieces_size, pieces_size)),
+    "white_king": Image.open(os.path.join(path_project, "white_king.png")).resize((pieces_size, pieces_size)),
 }
 def print_board():
     set_pos_show()
@@ -124,6 +128,18 @@ def print_board():
                 label_piece.bind("<Button-1>", print_coordinates)
             elif board_pos_show[i][j] == 2:
                 piece = ImageTk.PhotoImage(pieces["black_piece"])
+                label_piece = tk.Label(square, image=piece, bg=square_color)
+                label_piece.image = piece
+                label_piece.pack(pady=0)
+                label_piece.bind("<Button-1>", print_coordinates)
+            elif board_pos_show[i][j] == 3:
+                piece = ImageTk.PhotoImage(pieces["white_king"])
+                label_piece = tk.Label(square, image=piece, bg=square_color)
+                label_piece.image = piece
+                label_piece.pack(pady=0)
+                label_piece.bind("<Button-1>", print_coordinates)
+            elif board_pos_show[i][j] == 4:
+                piece = ImageTk.PhotoImage(pieces["black_king"])
                 label_piece = tk.Label(square, image=piece, bg=square_color)
                 label_piece.image = piece
                 label_piece.pack(pady=0)
