@@ -35,9 +35,6 @@ def set_initial_pos():
             else:
                 board_pos[i][j] = 0
 
-    board_pos[3][3] = 3
-    board_pos[4][4] = 4
-
 def set_pos_show():
     for i in range(8):
         for j in range(8):
@@ -164,7 +161,6 @@ def entryPoint():
     for i in range(8):
         for j in range(8):
             board_pos[i][j] = board_c[i][j]
-    print(board_pos)
     qtd_moves = 0
     list_of_moves.clear()
     return test
