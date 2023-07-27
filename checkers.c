@@ -1037,38 +1037,38 @@ Board parseBoardFromMatrix(int matrixBoard[8][8])
             {
             case 0:
                 board.square[squareIndex].piece.id = 0;
-                board.square[squareIndex].state == Free;
+                board.square[squareIndex].state = Free;
                 break;
             case 1:
-                board.square[squareIndex].piece.color == White;
+                board.square[squareIndex].piece.color = White;
                 board.square[squareIndex].piece.id = pieceIdCounter++;
                 board.square[squareIndex].piece.position = currentPosition;
-                board.square[squareIndex].piece.type == Checker;
-                board.square[squareIndex].state == Occupied;
+                board.square[squareIndex].piece.type = Checker;
+                board.square[squareIndex].state = Occupied;
                 board.whitePieces++;
                 break;
             case 2:
-                board.square[squareIndex].piece.color == Black;
+                board.square[squareIndex].piece.color = Black;
                 board.square[squareIndex].piece.id = pieceIdCounter++;
                 board.square[squareIndex].piece.position = currentPosition;
-                board.square[squareIndex].piece.type == Checker;
-                board.square[squareIndex].state == Occupied;
+                board.square[squareIndex].piece.type = Checker;
+                board.square[squareIndex].state = Occupied;
                 board.blackPieces++;
                 break;
             case 3:
-                board.square[squareIndex].piece.color == White;
+                board.square[squareIndex].piece.color = White;
                 board.square[squareIndex].piece.id = pieceIdCounter++;
                 board.square[squareIndex].piece.position = currentPosition;
-                board.square[squareIndex].piece.type == King;
-                board.square[squareIndex].state == Occupied;
+                board.square[squareIndex].piece.type = King;
+                board.square[squareIndex].state = Occupied;
                 board.whitePieces++;
                 break;
             case 4:
-                board.square[squareIndex].piece.color == Black;
+                board.square[squareIndex].piece.color = Black;
                 board.square[squareIndex].piece.id = pieceIdCounter++;
                 board.square[squareIndex].piece.position = currentPosition;
-                board.square[squareIndex].piece.type == King;
-                board.square[squareIndex].state == Occupied;
+                board.square[squareIndex].piece.type = King;
+                board.square[squareIndex].state = Occupied;
                 board.blackPieces++;
                 break;
             default:
@@ -1145,8 +1145,6 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
     enum MovementType moveType;
-
-    moveType = checkMovementSequence(&board, &movementSequence);
 
     switch (moveType)
     {
