@@ -1005,7 +1005,7 @@ void playGame(Board board)
 }
 
 Board parseBoardFromMatrix(int matrixBoard[8][8])
-{
+{   
     Board board;
     board.blackPieces = 0;
     board.whitePieces = 0;
@@ -1021,7 +1021,7 @@ Board parseBoardFromMatrix(int matrixBoard[8][8])
             squareIndex = i * SQUARES_PER_ROW + j;
             currentPosition.row = i;
             currentPosition.col = j;
-            board.square[squareIndex].id = squareIdCounter = i++;
+            board.square[squareIndex].id = squareIdCounter++;
             board.square[squareIndex].position = currentPosition;
 
             if ((i + j) % 2 == 0)
@@ -1075,7 +1075,6 @@ Board parseBoardFromMatrix(int matrixBoard[8][8])
                 break;
             }
         }
-        
     }
     return board;
 }
@@ -1144,7 +1143,6 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
 int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens])
 {
     Board board = parseBoardFromMatrix(matrixBoard);
-    printBoard(&board, 0);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
     enum MovementType moveType;
 
@@ -1179,9 +1177,25 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
 int main(void)
 {
-    Board board = createBoard();
-    setPieces(&board);
-    printBoard(&board, 0);
+    int matrix[8][8] = 
+    {
+        {1, 0, 1, 0, 1, 0, 1, 0},
+        {0, 1, 0, 1, 0, 1, 0, 1},
+        {1, 0, 1, 0, 1, 0, 1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 2, 0, 2, 0, 2, 0, 2},
+        {2, 0, 2, 0, 2, 0, 2, 0},
+        {0, 2, 0, 2, 0, 2, 0, 2}
+    };  
+
+    int numOfItens = 4;
+    int list_moves[4] = {2, 0, 3, 1};
+
+    printf("\n\nReturn: %d", entryPoint(matrix, numOfItens, list_moves));
+    // Board board = createBoard();
+    // setPieces(&board);
+    // printBoard(&board, 0);
 
     // TEST HARDCODED POSITIONS
 
@@ -1220,10 +1234,10 @@ int main(void)
     // movePiece(&board, m1);
     // movePiece(&board, m2);
 
-    printBoard(&board, 0);
+    // printBoard(&board, 0);
 
     // END OF TEST HARDCODED POSITIONS
 
-    playGame(board);
+    // playGame(board);
 }
 
