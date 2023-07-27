@@ -1144,7 +1144,8 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 {
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
-    enum MovementType moveType;
+    Movement move = movementSequence.seqMovements[0];
+    enum MovementType moveType = checkMovement(&board, &move, &board.square[getIndexOfPosition(move.origin)], 0);
 
     switch (moveType)
     {
