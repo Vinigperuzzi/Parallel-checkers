@@ -96,8 +96,8 @@ enum MovementType
 enum Winner
 {
     NoOne,
-    WhiteWon,
-    BlackWon
+    WhiteWon = 3,
+    BlackWon = 4
 };
 
 //////////////// -- GLOBAL VAR's -- ////////////////
@@ -382,11 +382,6 @@ void turnKing(Board *board, Piece *piece)
     board->square[index].piece.type = King;
 }
 
-void setTurn(int actualTurn)
-{
-    turn = actualTurn;
-}
-
 void swapTurn(int *frontEndTurn)
 {
     if (turn)
@@ -648,7 +643,7 @@ enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving
 {
     if (chainAttackFlag)
     {
-        if (hasPiece(board, move->destiny) ||         // checks if the destiny position is free
+        if (hasPiece(board, move->destiny) ||         // checks if the destiny position is free and
             !isDiagonal(move->origin, move->destiny)) // if the destiny position is diagonal in relation to destiny's
         {
             return Invalid;
@@ -659,7 +654,7 @@ enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving
         if (!(hasPiece(board, move->origin) &&           // checks if the origin position has a piece,
               !hasPiece(board, move->destiny) &&         // if the destiny position is free
               isDiagonal(move->origin, move->destiny) && // if the destiny position is diagonal in relation to destiny's
-              turn == board->square[getIndexOfPosition(move->origin)].piece.color))
+              turn == pieceMoving->color))
         { // and if is the turn of the piece in origin to play
             return Invalid;
         }
@@ -853,10 +848,10 @@ enum MovementType checkMovementSequence(Board *board, MovementSequence *movement
 
     if (movementType == Attack)
     {
-        for (size_t i = 0; i < movementSequence->numberOfMovements; i++)
+        for (size_t i = 1; i < movementSequence->numberOfMovements; i++)
         {   
-            pieceMoving = board->square[getIndexOfPosition(movementSequence->seqMovements[i].origin)].piece;
-            movementType == checkMovement(board, &movementSequence->seqMovements[i], &pieceMoving, 0);
+            movementType = checkMovement(board, &movementSequence->seqMovements[i], &pieceMoving, 1);
+            printf("\nMoveType: %d", movementType);
             if (movementType != Attack)
             {
                 return Invalid;
@@ -876,17 +871,15 @@ enum MovementType checkMovementSequence(Board *board, MovementSequence *movement
     return Invalid;
 }
 
-void checkWinCondition(Board *board)
+enum Winner checkWinCondition(Board *board)
 {
     if (board->blackPieces == 0)
     {
-        printBoard(board, 0);
-        endGame(WhiteWon);
+        return WhiteWon;
     }
     else if (board->whitePieces == 0)
     {
-        printBoard(board, 0);
-        endGame(BlackWon);
+        return BlackWon;
     }
 
     // Tests for each piece of the current turn player if it has any possible
@@ -906,7 +899,7 @@ void checkWinCondition(Board *board)
                 testMove.destiny = board->square[j].position;
                 if (checkMovement(board, &testMove, &testPiece, 0) != Invalid)
                 {
-                    return;
+                    return NoOne;
                 }
             }
         }
@@ -914,13 +907,11 @@ void checkWinCondition(Board *board)
 
     if (turn == Black)
     {
-        printBoard(board, 0);
-        endGame(WhiteWon);
+        return WhiteWon;
     }
     else if (turn == White)
     {
-        printBoard(board, 0);
-        endGame(BlackWon);
+        return BlackWon;
     }
 }
 
@@ -1147,7 +1138,7 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
     }
 }
 
-int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int* frontEndTurn)
+int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn)
 {
     turn = *frontEndTurn;
     //Debug emergencial - Socorro
@@ -1163,35 +1154,37 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         printf("\n");
     }
-    *frontEndTurn = 1234567890;//Mudando só para testar se a mudança tá sensível no front - como tá dando seg fault, submeter sem jogada permite testar essa linha...
-    //Fim do debug emergencal
+
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
-    Movement move = movementSequence.seqMovements[0];
-    enum MovementType moveType = checkMovement(&board, &move, &board.square[getIndexOfPosition(move.origin)], 0);
+    enum MovementType moveType = checkMovementSequence(&board, &movementSequence);
     printf("\n\nMove: %d", moveType);
-    
+    enum Winner winner;
 
     switch (moveType)
     {
     case Move:
         movePiece(&board, movementSequence.seqMovements[0]);
         updateMatrixBoard(&board, matrixBoard);
-        printBoard(&board, 0);
-        swapTurn(frontEndTurn);    
-        checkWinCondition(&board);
+     //   printBoard(&board, 0);
+        swapTurn(frontEndTurn);
+        winner = checkWinCondition(&board);
+        if(winner != NoOne)
+        {
+            return winner;
+        }
         return Move;
         break;
     case Attack:
-        printf("\n\nChegou aqui1?");
-        getchar();
         makeAttack(&board, &movementSequence);
-        printf("\n\nChegou aqui2?");
-        getchar();
         updateMatrixBoard(&board, matrixBoard);
-        printBoard(&board, 0);
+   //     printBoard(&board, 0);
         swapTurn(frontEndTurn);
-        checkWinCondition(&board);
+        winner = checkWinCondition(&board);
+        if(winner != NoOne)
+        {
+            return winner;
+        }
         return Attack;
         break;
     case Invalid:
