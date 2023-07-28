@@ -7,7 +7,7 @@ PYCODE = damas.py
 
 $(LIBNAME): $(SRC)
 	$(CC) $(CFLAGS) -shared -o $(LIBNAME) $(SRC)
-	@echo "Lib compilada com sucesso, você pode rodar o programa com >python damas.py."
+	@echo "Lib compilada com sucesso, você pode rodar o programa com >python checkers.py."
 
 clean:
 	rm -f $(LIBNAME)

@@ -1147,13 +1147,30 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
     }
 }
 
-int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int frontEndTurn)
+int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int* frontEndTurn)
 {
-    turn = frontEndTurn;
+    turn = *frontEndTurn;
+    //Debug emergencial - Socorro
+    printf("\n\nQuantidade recebida: %d\n", numberOfItens);
+    printf("\n\nMovimentos recebidos:\n");
+    for (int i = 0; i < numberOfItens; i++) {
+        printf("%d ", listOfMovements[i]);
+    }
+    printf("\n");
+    for (int i = 7; i>=0; i--){
+        for (int j = 0; j < 8; j++){
+            printf("%d ", matrixBoard[i][j]);
+        }
+        printf("\n");
+    }
+    *frontEndTurn = 1234567890;//Mudando só para testar se a mudança tá sensível no front - como tá dando seg fault, submeter sem jogada permite testar essa linha...
+    //Fim do debug emergencal
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
     Movement move = movementSequence.seqMovements[0];
     enum MovementType moveType = checkMovement(&board, &move, &board.square[getIndexOfPosition(move.origin)], 0);
+    printf("\n\nMove: %d", moveType);
+    
 
     switch (moveType)
     {
@@ -1161,15 +1178,19 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         movePiece(&board, movementSequence.seqMovements[0]);
         updateMatrixBoard(&board, matrixBoard);
         printBoard(&board, 0);
-        swapTurn(&frontEndTurn);    
+        swapTurn(frontEndTurn);    
         checkWinCondition(&board);
         return Move;
         break;
     case Attack:
+        printf("\n\nChegou aqui1?");
+        getchar();
         makeAttack(&board, &movementSequence);
+        printf("\n\nChegou aqui2?");
+        getchar();
         updateMatrixBoard(&board, matrixBoard);
         printBoard(&board, 0);
-        swapTurn(&frontEndTurn);
+        swapTurn(frontEndTurn);
         checkWinCondition(&board);
         return Attack;
         break;

@@ -13,6 +13,7 @@ board_pos_send = [[0 for _ in range(8)] for _ in range(8)]
 # Data struct to mantain the moves
 qtd_moves = 0
 list_of_moves = []
+front_end_turn = int(0)
 
 # Initialization of the piece's positions
 # Setting white as 1
@@ -70,7 +71,7 @@ def submit_move():
     global qtd_moves, list_of_moves
     print(list_of_moves)
     print(board_pos)
-    test = entryPoint()
+    test = entry_point()
     if not test:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
     else:
@@ -134,13 +135,14 @@ def print_board():
                 label_piece.pack(pady=0)
                 label_piece.bind("<Button-1>", print_coordinates)
 
-def entryPoint():
-    global board_pos, board_pos_send ,list_of_moves, qtd_moves
+def entry_point():
+    global board_pos, board_pos_send ,list_of_moves, qtd_moves, front_end_turn
     for i in range(8):
         for j in range(8):
             board_pos_send[i][7-j] = board_pos[i][j]
 
     print("Board_pos_send:\n\n", board_pos_send)
+
     # Convert the matrice Python for NumPy array
     board_np = np.array(board_pos_send, dtype=np.int32)
     '''Como uma matriz em python é uma lista de listas, para ser reconhecida pelo C, é necessário converter
@@ -156,15 +158,28 @@ def entryPoint():
     A estrutura do for, apesar de estar na forma iter em uma linha só, é um for dentro de for que percorre
     cada elemento de cada linha.'''
 
-    # Convert to pointer so it can be manipuleated directly in C
     board_ptr = ctypes.pointer(board_c)
 
-    # Wrap the array of movements
+    front_end_turn_var = ctypes.c_int(front_end_turn)
+
+
+    # Wrapping the array of movements
     qtd_moves = len(list_of_moves)
     moves_c = (ctypes.c_int * qtd_moves)(*map(int, list_of_moves))
 
-    # Call the C function
-    test = lib.entryPoint(board_ptr, qtd_moves, moves_c)
+    print("\n\n\nImpressão do perturbado:\n")
+    for value in moves_c:
+        print(value)
+
+    print("\n\n\nMandando a lista: ", list_of_moves, "\n\nDe tamanho: ", qtd_moves)
+
+    test = lib.entryPoint(board_ptr, ctypes.c_int(qtd_moves), moves_c, ctypes.byref(front_end_turn_var))
+
+    print("\n\nfront_end_turn foi como:", front_end_turn)
+
+    front_end_turn = front_end_turn_var.value
+
+    print("\nfront_end_turn voltou como:", front_end_turn)
 
     # Parse the matrix send to C back to list pf lists in python
     for i in range(8):
@@ -261,7 +276,7 @@ path_to_library = os.path.join(path_project, "lib.so")
 lib = ctypes.CDLL(path_to_library)
 
 #Define types to pass as arguments and the return (int mat[8][8], int qtd, int array[qtd])
-lib.entryPoint.argtypes = [ctypes.POINTER(MatrixType), ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
+lib.entryPoint.argtypes = [ctypes.POINTER(MatrixType), ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
 lib.entryPoint.restype = ctypes.c_int
 
 # Run graphic interface
