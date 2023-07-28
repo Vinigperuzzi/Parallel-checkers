@@ -382,15 +382,22 @@ void turnKing(Board *board, Piece *piece)
     board->square[index].piece.type = King;
 }
 
-void swapTurn()
+void setTurn(int actualTurn)
+{
+    turn = actualTurn;
+}
+
+void swapTurn(int *frontEndTurn)
 {
     if (turn)
     {
         turn = White;
+        *frontEndTurn = 0;
     }
     else
     {
         turn = Black;
+        *frontEndTurn = 1;
     }
 }
 
@@ -970,39 +977,39 @@ void printTurn()
     printf("\n\t\t\tTURN: %s", color);
 }
 
-void playGame(Board board)
-{
-    MovementSequence movementSequence;
-    enum MovementType moveType;
+// void playGame(Board board)
+// {
+//     MovementSequence movementSequence;
+//     enum MovementType moveType;
 
-    while (1)
-    {
-        printTurn();
-        movementSequence = getMovementFromUser();
-        moveType = checkMovementSequence(&board, &movementSequence);
+//     while (1)
+//     {
+//         printTurn();
+//         movementSequence = getMovementFromUser();
+//         moveType = checkMovementSequence(&board, &movementSequence);
 
-        switch (moveType)
-        {
-        case Move:
-            movePiece(&board, movementSequence.seqMovements[0]);
-            printBoard(&board, 0);
-            swapTurn();    
-            checkWinCondition(&board);
-            break;
-        case Attack:
-            makeAttack(&board, &movementSequence);
-            printBoard(&board, 0);
-            swapTurn();
-            checkWinCondition(&board);
-            break;
-        case Invalid:
-            printf("\n\t\t\tThis movement is not allowed. Try another one.\n");
-            break;
-        default:
-            break;
-        }
-    }
-}
+//         switch (moveType)
+//         {
+//         case Move:
+//             movePiece(&board, movementSequence.seqMovements[0]);
+//             printBoard(&board, 0);
+//             swapTurn(&fron);    
+//             checkWinCondition(&board);
+//             break;
+//         case Attack:
+//             makeAttack(&board, &movementSequence);
+//             printBoard(&board, 0);
+//             swapTurn();
+//             checkWinCondition(&board);
+//             break;
+//         case Invalid:
+//             printf("\n\t\t\tThis movement is not allowed. Try another one.\n");
+//             break;
+//         default:
+//             break;
+//         }
+//     }
+// }
 
 Board parseBoardFromMatrix(int matrixBoard[8][8])
 {   
@@ -1084,7 +1091,7 @@ MovementSequence parseMovementSequenceFromArray(int numberOfItens, int movements
     MovementSequence movementSequence;
     movementSequence.numberOfMovements = numberOfItens / 4;
 
-    for (size_t i = 0, j = 0; i < numberOfItens; i++, j+=4)
+    for (size_t i = 0, j = 0; i < movementSequence.numberOfMovements; i++, j+=4)
     {
         movementSequence.seqMovements[i].origin.row = movements[j];
         movementSequence.seqMovements[i].origin.col = movements[j + 1];
@@ -1140,8 +1147,9 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
     }
 }
 
-int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens])
+int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int frontEndTurn)
 {
+    turn = frontEndTurn;
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
     Movement move = movementSequence.seqMovements[0];
@@ -1153,7 +1161,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         movePiece(&board, movementSequence.seqMovements[0]);
         updateMatrixBoard(&board, matrixBoard);
         printBoard(&board, 0);
-        swapTurn();    
+        swapTurn(&frontEndTurn);    
         checkWinCondition(&board);
         return Move;
         break;
@@ -1161,7 +1169,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         makeAttack(&board, &movementSequence);
         updateMatrixBoard(&board, matrixBoard);
         printBoard(&board, 0);
-        swapTurn();
+        swapTurn(&frontEndTurn);
         checkWinCondition(&board);
         return Attack;
         break;
@@ -1176,22 +1184,22 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
 int main(void)
 {
-    int matrix[8][8] = 
-    {
-        {1, 0, 1, 0, 1, 0, 1, 0},
-        {0, 1, 0, 1, 0, 1, 0, 1},
-        {1, 0, 1, 0, 1, 0, 1, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 2, 0, 2, 0, 2, 0, 2},
-        {2, 0, 2, 0, 2, 0, 2, 0},
-        {0, 2, 0, 2, 0, 2, 0, 2}
-    };  
+    // int matrix[8][8] = 
+    // {
+    //     {1, 0, 1, 0, 1, 0, 1, 0},
+    //     {0, 1, 0, 1, 0, 1, 0, 1},
+    //     {1, 0, 1, 0, 1, 0, 1, 0},
+    //     {0, 0, 0, 0, 0, 0, 0, 0},
+    //     {0, 0, 0, 0, 0, 0, 0, 0},
+    //     {0, 2, 0, 2, 0, 2, 0, 2},
+    //     {2, 0, 2, 0, 2, 0, 2, 0},
+    //     {0, 2, 0, 2, 0, 2, 0, 2}
+    // };  
 
-    int numOfItens = 4;
-    int list_moves[4] = {2, 0, 3, 1};
+    // int numOfItens = 4;
+    // int list_moves[4] = {2, 0, 3, 1};
 
-    printf("\n\nReturn: %d", entryPoint(matrix, numOfItens, list_moves));
+    // printf("\n\nReturn: %d", entryPoint(matrix, numOfItens, list_moves));
     // Board board = createBoard();
     // setPieces(&board);
     // printBoard(&board, 0);
