@@ -8,8 +8,16 @@
 
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW * SQUARES_PER_ROW
+#define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW/2
+#define CENTRAL_SQUARES PLAYABLE_SQUARES_PER_ROW/2
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
+#define MAX_MOVEMENTS_PER_TURN 12
+#define WEIGHT_DIFF_PIECES 0.5
+#define WEIGHT_QTD_KINGS 0.25
+#define WEIGHT_EMINENT_KINGS 0.150 //pieces one square from promotion
+#define WEIGHT_POSSIBLE_KINGS 0.5 //pieces two squares from promotion
+#define WEIGHT_CENTRAL_PIECES 0.5
 
 //////////////// -- DATA TYPE's -- ////////////////
 
@@ -57,7 +65,9 @@ typedef struct STBoard
 {
     Square square[TOTAL_SQUARES];
     int whitePieces;
+    int whiteKings;
     int blackPieces;
+    int blackKings;
 } Board;
 
 typedef struct STMovement
@@ -68,8 +78,9 @@ typedef struct STMovement
 
 typedef struct STMovementSequence
 {
-    Movement seqMovements[12];
+    Movement seqMovements[MAX_MOVEMENTS_PER_TURN];
     int numberOfMovements;
+    enum MovementType movementType;
 } MovementSequence;
 
 typedef struct STPathInfo
@@ -204,6 +215,8 @@ Board createBoard()
 
     board.blackPieces = PIECES_PER_PLAYER;
     board.whitePieces = PIECES_PER_PLAYER;
+    board.blackKings = 0;
+    board.whiteKings = 0;
     return board;
 }
 
@@ -380,6 +393,14 @@ void turnKing(Board *board, Piece *piece)
 {
     int index = getIndexOfPosition(piece->position);
     board->square[index].piece.type = King;
+    if (board->square[index].piece.color == White)
+    {
+        board->whiteKings++;
+    }
+    else
+    {
+        board->blackKings++;
+    }
 }
 
 void swapTurn(int *frontEndTurn)
@@ -639,7 +660,7 @@ void endGame(enum Winner winner)
     exit(1);
 }
 
-enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving, int chainAttackFlag)
+enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving, enum PieceColor turn, int chainAttackFlag)
 {
     if (chainAttackFlag)
     {
@@ -718,7 +739,7 @@ enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving
 // Given a certain position and a piece to test, calculates the maximum amount of captures
 // possible starting a capturing chain in that position
 
-int getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pieceTested, IdStack *idStack)
+int getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pieceTested, enum PieceColor turn, IdStack *idStack)
 {
     int captures = 0;
     int maxCaptures = 0;
@@ -744,11 +765,11 @@ int getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pi
             testMovement.destiny = testSquare.position;
             if (board->square[getIndexOfPosition(*originPosition)].state == Free)
             {
-                testMoveType = checkMovement(board, &testMovement, pieceTested, 1);
+                testMoveType = checkMovement(board, &testMovement, pieceTested, turn, 1);
             }
             else
             {
-                testMoveType = checkMovement(board, &testMovement, pieceTested, 0);
+                testMoveType = checkMovement(board, &testMovement, pieceTested, turn, 0);
             }
 
             if (testMoveType == Attack)
@@ -758,7 +779,7 @@ int getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pi
                 {
                     pushIdStack(idStack, testPathInfo.lastPieceInTheWay.id);
                     captures++;
-                    captures = captures + getMaxCapturesFromPosition(board, &testMovement.destiny, pieceTested, idStack);
+                    captures = captures + getMaxCapturesFromPosition(board, &testMovement.destiny, pieceTested, turn, idStack);
                 }
             }
         }
@@ -794,7 +815,7 @@ int getMaxPossibleCaptures(Board *board, enum PieceColor pieceColor)
                                      // on the simulated attack chain
         if (board->square[i].state == Occupied && board->square[i].piece.color == pieceColor)
         {
-            possibleCaptures = getMaxCapturesFromPosition(board, &board->square[i].position, &board->square[i].piece, &idStack);
+            possibleCaptures = getMaxCapturesFromPosition(board, &board->square[i].position, &board->square[i].piece, pieceColor, &idStack);
             if (possibleCaptures > maxPossibleCaptures)
             {
                 maxPossibleCaptures = possibleCaptures;
@@ -814,19 +835,27 @@ void capturePiece(Board *board, Piece *piece)
 
     if (piece->color == White)
     {
+        if(piece->type == King)
+        {
+            board->whiteKings--;
+        }
         board->whitePieces--;
     }
     else
     {
+        if(piece->type == King)
+        {
+            board->blackKings--;
+        }
         board->blackPieces--;
     }
 }
 
-enum MovementType checkMovementSequence(Board *board, MovementSequence *movementSequence)
+void checkMovementSequence(Board *board, MovementSequence *movementSequence, enum PieceColor turn)
 {
     enum MovementType movementType;
     Piece pieceMoving = board->square[getIndexOfPosition(movementSequence->seqMovements[0].origin)].piece;
-    movementType = checkMovement(board, &movementSequence->seqMovements[0], &pieceMoving, 0);
+    movementType = checkMovement(board, &movementSequence->seqMovements[0], &pieceMoving, turn, 0);
 
     // First we need to check the first movement on the sequence. If its a movement, we dont need to check
     // the others, cause only attacks can have more than one movement
@@ -835,11 +864,13 @@ enum MovementType checkMovementSequence(Board *board, MovementSequence *movement
     {
         if (movementSequence->numberOfMovements > 1 || getMaxPossibleCaptures(board, turn) > 0)
         { // checking if it consists of just one movement AND if has any possible capture movement of the turn's player on the board
-            return Invalid;
+            movementSequence->movementType = Invalid;
+            return;
         }
         else
         {
-            return Move;
+            movementSequence->movementType = Move;
+            return;
         }
     }
 
@@ -850,28 +881,32 @@ enum MovementType checkMovementSequence(Board *board, MovementSequence *movement
     {
         for (size_t i = 1; i < movementSequence->numberOfMovements; i++)
         {   
-            movementType = checkMovement(board, &movementSequence->seqMovements[i], &pieceMoving, 1);
+            movementType = checkMovement(board, &movementSequence->seqMovements[i], &pieceMoving, turn, 1);
             printf("\nMoveType: %d", movementType);
             if (movementType != Attack)
             {
-                return Invalid;
+                movementSequence->movementType = Invalid;
+                return;
             }
         }
 
         if (getMaxPossibleCaptures(board, turn) > movementSequence->numberOfMovements)
         {
-            return Invalid;
+            movementSequence->movementType = Invalid;
+            return;
         }
         else
         {
-            return Attack;
+            movementSequence->movementType = Attack;
+            return;
         }
     }
 
-    return Invalid;
+    movementSequence->movementType = Invalid;
+    return;
 }
 
-enum Winner checkWinCondition(Board *board)
+enum Winner checkWinCondition(Board *board, enum PieceColor turn)
 {
     if (board->blackPieces == 0)
     {
@@ -897,7 +932,7 @@ enum Winner checkWinCondition(Board *board)
             {
                 testPiece = board->square[getIndexOfPosition(testMove.origin)].piece;
                 testMove.destiny = board->square[j].position;
-                if (checkMovement(board, &testMove, &testPiece, 0) != Invalid)
+                if (checkMovement(board, &testMove, &testPiece, turn, 0) != Invalid)
                 {
                     return NoOne;
                 }
@@ -1007,6 +1042,8 @@ Board parseBoardFromMatrix(int matrixBoard[8][8])
     Board board;
     board.blackPieces = 0;
     board.whitePieces = 0;
+    board.whiteKings = 0;
+    board.blackKings = 0;
     int squareIdCounter = 0;
     int pieceIdCounter = 0;
     int squareIndex;
@@ -1060,6 +1097,7 @@ Board parseBoardFromMatrix(int matrixBoard[8][8])
                 board.square[squareIndex].piece.type = King;
                 board.square[squareIndex].state = Occupied;
                 board.whitePieces++;
+                board.whiteKings++;
                 break;
             case 4:
                 board.square[squareIndex].piece.color = Black;
@@ -1068,6 +1106,7 @@ Board parseBoardFromMatrix(int matrixBoard[8][8])
                 board.square[squareIndex].piece.type = King;
                 board.square[squareIndex].state = Occupied;
                 board.blackPieces++;
+                board.blackKings++;
                 break;
             default:
                 break;
@@ -1138,6 +1177,106 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
     }
 }
 
+int checkQtdPiecesInRank(Board board, enum PieceColor pieceColor, int rank)
+{
+    int qtdPieces = 0;
+    for (int i = 0; i < SQUARES_PER_ROW; i++)
+    {
+        if(board.square[(rank*SQUARES_PER_ROW)+i].piece.color == pieceColor)
+        {
+            qtdPieces++;
+        }
+    }
+    return qtdPieces;
+}
+
+int checkCentralPieces(Board board, enum PieceColor pieceColor)
+{
+    int qtdPieces = 0;
+    for (int i = 3; i < 5; i++)
+    {
+        for (int j = 3; j < 5; j++)
+        {
+            if (board.square[i * SQUARES_PER_ROW + j].piece.color == pieceColor)
+            {
+                qtdPieces++;
+            }
+        }
+    }
+    return qtdPieces;
+}
+
+float evaluatePos(Board *board, enum PieceColor turn)
+{
+    if (checkWinCondition(board, turn) == turn+2)
+    {
+        return 10;
+    }
+    float scoreQtdpieces;
+    float scoreKings;
+    if (!turn)
+    {
+        scoreQtdpieces = (board->whitePieces - board->blackPieces)/PIECES_PER_PLAYER*WEIGHT_DIFF_PIECES;
+        scoreKings = (board->whiteKings - board->blackKings)/PIECES_PER_PLAYER*WEIGHT_QTD_KINGS;
+    }
+    else
+    {
+        scoreQtdpieces = (board->blackPieces - board->whitePieces)/PIECES_PER_PLAYER*WEIGHT_DIFF_PIECES;
+        scoreKings = (board->blackKings - board->whiteKings)/PIECES_PER_PLAYER*WEIGHT_QTD_KINGS;
+    }
+    float scoreEminentKings = checkQtdPiecesInSeventhRank(board, turn, 6)/PLAYABLE_SQUARES_PER_ROW*WEIGHT_EMINENT_KINGS;
+    float scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5)/PLAYABLE_SQUARES_PER_ROW*WEIGHT_POSSIBLE_KINGS;
+    float scoreCentralPieces = checkCentralPieces(*board, turn)/CENTRAL_SQUARES*WEIGHT_CENTRAL_PIECES;
+    float pesoPosicao = scoreQtdpieces + scoreKings + scoreEminentKings + scorePossibleKings + scoreCentralPieces;
+    return pesoPosicao;
+}
+
+// var pesoGlobal, estado, primeiraJogadaRamificação;
+
+
+void generateComputerMovement(Board *board, MovementSequence *movementSequence, int level, int depth, float *scoreAcc, MovementSequence *computerMovement)
+{
+    float localScoreSum = *scoreAcc;
+    enum PieceColor thisLevelTurn = level % 2;
+
+    checkMovementSequence(board, movementSequence, thisLevelTurn);
+
+    switch (movementSequence->movementType)
+    {
+    case Move:
+        movePiece(&board, movementSequence->seqMovements[0]);
+        break;
+    case Attack:
+        makeAttack(&board, &movementSequence);
+        break;
+    default:
+        break;
+    }
+
+    localScoreSum += evaluatePos(board, thisLevelTurn);
+
+    
+
+//     if (nivel < limite){
+//         for (cada peça da cor da jogada no tabuleiro){
+//             for (cada um dos 8 movimentos possivelmente possíveis ([1][1], [1][-1], [-1][1], [-1][-1], [2][2]...)){
+//                 if (movimento possivel){
+//                     array.push(movimento)
+//                 }
+//             }
+//         }
+//         for (cada jogada do array criado){
+//             jogadaMaquina(tabuleiroLocal, jogadaDoArray, nivel++, limite, somaLocal);
+//         }
+//     }
+//     else {
+//         if(somaLocal > pesoGlobal){
+//             pesoGlobal = somaLocal;
+//             primeiraJogadaRamificação = ramificaçãoJogadas[1];
+//         }
+//     }
+}
+
 int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn)
 {
     turn = *frontEndTurn;
@@ -1157,18 +1296,18 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
-    enum MovementType moveType = checkMovementSequence(&board, &movementSequence);
-    printf("\n\nMove: %d", moveType);
+    checkMovementSequence(&board, &movementSequence, turn);
+    printf("\n\nMove: %d", movementSequence.movementType);
     enum Winner winner;
 
-    switch (moveType)
+    switch (movementSequence.movementType)
     {
     case Move:
         movePiece(&board, movementSequence.seqMovements[0]);
         updateMatrixBoard(&board, matrixBoard);
      //   printBoard(&board, 0);
         swapTurn(frontEndTurn);
-        winner = checkWinCondition(&board);
+        winner = checkWinCondition(&board, turn);
         if(winner != NoOne)
         {
             return winner;
@@ -1180,7 +1319,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         updateMatrixBoard(&board, matrixBoard);
    //     printBoard(&board, 0);
         swapTurn(frontEndTurn);
-        winner = checkWinCondition(&board);
+        winner = checkWinCondition(&board, turn);
         if(winner != NoOne)
         {
             return winner;
@@ -1261,4 +1400,9 @@ int main(void)
 
     // playGame(board);
 }
+
+
+//TO DO LIST
+
+//1- Adicionar mmovementType à estrutura Movement
 

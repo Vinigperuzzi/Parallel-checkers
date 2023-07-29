@@ -184,7 +184,7 @@ def entry_point():
 
     # Wrapping the array of movements
     qtd_moves = len(list_of_moves)
-    moves_c = (ctypes.c_int * qtd_moves)(*map(int, list_of_moves))
+    moves_c = (ctypes.c_int * qtd_moves)(*map(int, list_of_moves))  #Consider change qtd_moves for the fixed value 48, that the maximun possible chain 
 
     print("\n\n\nImpressão do perturbado:\n")
     for value in moves_c:
