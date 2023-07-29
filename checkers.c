@@ -77,6 +77,13 @@ typedef struct STMovement
     Position destiny;
 } Movement;
 
+enum MovementType
+{
+    Invalid,
+    Move,
+    Attack
+};
+
 typedef struct STMovementSequence
 {
     Movement seqMovements[MAX_MOVEMENTS_PER_TURN];
@@ -98,12 +105,6 @@ enum Adjacency
     AdjacentBack
 };
 
-enum MovementType
-{
-    Invalid,
-    Move,
-    Attack
-};
 
 enum Winner
 {
@@ -117,6 +118,8 @@ enum Winner
 char whiteSquare[9] = "\033[47m";
 char blackSquare[9] = "\033[40m";
 enum PieceColor turn = White;
+float globalScore = 0;
+MovementSequence firstMovement;
 
 //////////////// -- STACK IMPL -- ////////////////
 
@@ -1286,7 +1289,7 @@ float evaluatePos(Board *board, enum PieceColor turn)
         scoreQtdpieces = (board->blackPieces - board->whitePieces)/PIECES_PER_PLAYER*WEIGHT_DIFF_PIECES;
         scoreKings = (board->blackKings - board->whiteKings)/PIECES_PER_PLAYER*WEIGHT_QTD_KINGS;
     }
-    float scoreEminentKings = checkQtdPiecesInSeventhRank(board, turn, 6)/PLAYABLE_SQUARES_PER_ROW*WEIGHT_EMINENT_KINGS;
+    float scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6)/PLAYABLE_SQUARES_PER_ROW*WEIGHT_EMINENT_KINGS;
     float scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5)/PLAYABLE_SQUARES_PER_ROW*WEIGHT_POSSIBLE_KINGS;
     float scoreCentralPieces = checkCentralPieces(*board, turn)/CENTRAL_SQUARES*WEIGHT_CENTRAL_PIECES;
     float pesoPosicao = scoreQtdpieces + scoreKings + scoreEminentKings + scorePossibleKings + scoreCentralPieces;
@@ -1297,14 +1300,13 @@ float evaluatePos(Board *board, enum PieceColor turn)
 
 MovementSequence *getPossibleMovementsFromPosition(Board *board, Position testPosition)
 {
-    MovementSequence *possibleMovements[]
+    //MovementSequence *possibleMovements[]
 
 
 }
 
-void generateComputerMovement(Board *board, MovementSequence *movementSequence, int level, int depth, float *biggestScoreAcc, MovementSequence *computerMovement)
+void generateComputerMovement(Board *board, MovementSequence *movementSequence, int level, int depth, float *biggestScoreAcc, MovementSequence computerMovement)
 {
-    //TODO: adicionar lógica de passar o primeiro movimentos às ooutras
     float localScoreSum = *biggestScoreAcc;
     enum PieceColor thisLevelTurn = level % 2;
 
@@ -1355,7 +1357,6 @@ void generateComputerMovement(Board *board, MovementSequence *movementSequence, 
                 //possibleMovements[i][j] = getPossibleMovementsFromPosition()
                 
         }
-    }
     
     //-----------------------------to supondo
 
@@ -1366,10 +1367,23 @@ void generateComputerMovement(Board *board, MovementSequence *movementSequence, 
             for(size_t j = 0; j < MAX_FIRST_CHAIN_MOVE; j++)
             {
                 if (possibleMovements[i][j].movementType != Invalid){
+                    if (level == 1)
+                    {
+                        computerMovement = possibleMovements[i][j];
+                    }
                     generateComputerMovement(board, &possibleMovements[i][j], level+1, depth, biggestScoreAcc, computerMovement);
                 }
             }
         }
+    }
+    else
+    {
+        if (localScoreSum > globalScore)
+        {
+            globalScore = localScoreSum;
+            firstMovement = computerMovement;
+        }
+    }
     
 
    
