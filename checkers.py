@@ -14,6 +14,7 @@ board_pos_send = [[0 for _ in range(8)] for _ in range(8)]
 qtd_moves = 0
 list_of_moves = []
 front_end_turn = int(0)
+which_movement = 0  #This variable is specifically to tell if is the first square of the move, so it will not be duplicated
 
 # Initialization of the piece's positions
 # Setting white as 1
@@ -53,12 +54,15 @@ def obtain_proj_path():
 path_project = obtain_proj_path()
 
 def start_game():
-    global qtd_moves, list_of_moves
+    global qtd_moves, list_of_moves, which_movement, front_end_turn
     print("Iniciar Jogo")
     set_initial_pos()
     qtd_moves = 0
     list_of_moves.clear()
     status_label.config(text="Faça sua jogada", fg="black")  # Update the status label text
+    which_movement = 0
+    front_end_turn = 0
+
     print_board()
 
 def define_initial_pos():
@@ -67,10 +71,16 @@ def define_initial_pos():
     print_board()
 
 def submit_move():
+    global list_of_moves, qtd_moves, which_movement
     print("Submeter Jogada")
     global qtd_moves, list_of_moves
     print(list_of_moves)
     print(board_pos)
+    if (not len(list_of_moves)):
+        status_label.config(text="Você não chegou a fazer uma jogada!", fg="red")
+        return
+    list_of_moves.pop(); list_of_moves.pop()    #Take back the duplication from list_of_moves for the last move in chain
+    which_movement = 0
     test = entry_point()
     if not test:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
@@ -79,18 +89,27 @@ def submit_move():
     print_board()
 
 def print_coordinates(event):
-    global qtd_moves, list_of_moves
+    global qtd_moves, list_of_moves, which_movement
     widget = event.widget
     if isinstance(widget, tk.Label):  # Verify if a piece has been clicked or a square
         col, row = widget.master.grid_info()["column"], str(7 - int(widget.master.grid_info()["row"]))
         print(f"Coordenadas da peça: {col}{row}")
         list_of_moves.append(row); list_of_moves.append(col)
+        if (which_movement):
+            list_of_moves.append(row); list_of_moves.append(col)
     else:
         col, row = widget.grid_info()["column"], str(7 - int((widget.grid_info()["row"])))
         print(f"Coordenadas da square: {col}{row}")
         list_of_moves.append(row); list_of_moves.append(col)
+        if (which_movement):
+            list_of_moves.append(row); list_of_moves.append(col)
     status_label.config(text="Faça sua jogada", fg="black")  # Update the status label text
     print(col, row)
+    print(list_of_moves)
+    which_movement += 1
+
+def turn_on_highlight():
+    global list_of_moves
 
 # Function that create the colored squares and set png for pieces
 pieces_size = 63
@@ -197,6 +216,7 @@ color_iniciar_button = "#ebc588"  # Laranja
 color_definir_button = "#e0dba4"  # Azul
 color_sair_button = "#3b0032"  # Vermelho
 color_submeter_button = "#7ebea3"  # Verde mais vibrante
+color_highlight = "#0dd1b0"     #verdezinho bonitão
 
 # Principal window creation
 root = tk.Tk()
