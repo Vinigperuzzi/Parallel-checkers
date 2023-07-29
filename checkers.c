@@ -13,6 +13,7 @@
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
+#define MAX_FIRST_CHAIN_MOVE 13
 #define WEIGHT_DIFF_PIECES 0.5
 #define WEIGHT_QTD_KINGS 0.25
 #define WEIGHT_EMINENT_KINGS 0.150 //pieces one square from promotion
@@ -739,7 +740,7 @@ enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving
 // Given a certain position and a piece to test, calculates the maximum amount of captures
 // possible starting a capturing chain in that position
 
-int getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pieceTested, enum PieceColor turn, IdStack *idStack)
+int getMaxCapturesFromPositionNumber(Board *board, Position *originPosition, Piece *pieceTested, enum PieceColor turn, IdStack *idStack)
 {
     int captures = 0;
     int maxCaptures = 0;
@@ -779,7 +780,68 @@ int getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pi
                 {
                     pushIdStack(idStack, testPathInfo.lastPieceInTheWay.id);
                     captures++;
-                    captures = captures + getMaxCapturesFromPosition(board, &testMovement.destiny, pieceTested, turn, idStack);
+                    captures = captures + getMaxCapturesFromPositionNumber(board, &testMovement.destiny, pieceTested, turn, idStack);
+                }
+            }
+        }
+        if (captures > maxCaptures)
+        {
+            maxCaptures = captures;
+        }
+        if (captures > 0) // if it achieved to identify one possible capture, the function removes
+        {                 // the possible caputured piece id from the idStack before returning
+            popIdStack(idStack);
+        }
+        captures = 0;
+    }
+
+    return maxCaptures;
+}
+
+// Given a certain position and a piece to test, calculates the maximum amount of captures
+// possible starting a capturing chain in that position and returns the movement sequence to make those captures
+
+void getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pieceTested, enum PieceColor turn, IdStack *idStack)
+{
+    int captures = 0;
+    int maxCaptures = 0;
+    Movement testMovement;
+    enum MovementType testMoveType;
+    Square testSquare;
+    testMovement.origin = *originPosition; // sets the testMovement.origin to the position being tested
+
+    // iterates over the board looking for black squares free positions. When finds one, test the movement
+    // originating in originPosition with destiny in that position. If its an attack, verifies if it hasn't
+    // already been made checking the idStack. If it doesn't, increment the captures counter and calls this function
+    // again, recursively, passing the testMovement.destiny as argument and adding its return to the captures counter
+
+    for (size_t i = 0; i < TOTAL_SQUARES; ++i)
+    {
+        testSquare = board->square[i];
+
+        // if the originPosition has no piece in it, it needs to activate the 
+        // chainAttack Flag on calling the checkMovement function
+
+        if (testSquare.state == Free && isDiagonal(*originPosition, board->square[i].position))
+        {    
+            testMovement.destiny = testSquare.position;
+            if (board->square[getIndexOfPosition(*originPosition)].state == Free)
+            {
+                testMoveType = checkMovement(board, &testMovement, pieceTested, turn, 1);
+            }
+            else
+            {
+                testMoveType = checkMovement(board, &testMovement, pieceTested, turn, 0);
+            }
+
+            if (testMoveType == Attack)
+            {
+                PathInfo testPathInfo = getPathInfo(board, testMovement.origin, testMovement.destiny);
+                if (!hasId(idStack, testPathInfo.lastPieceInTheWay.id))
+                {
+                    pushIdStack(idStack, testPathInfo.lastPieceInTheWay.id);
+                    captures++;
+                    captures = captures + getMaxCapturesFromPositionNumber(board, &testMovement.destiny, pieceTested, turn, idStack);
                 }
             }
         }
@@ -815,7 +877,7 @@ int getMaxPossibleCaptures(Board *board, enum PieceColor pieceColor)
                                      // on the simulated attack chain
         if (board->square[i].state == Occupied && board->square[i].piece.color == pieceColor)
         {
-            possibleCaptures = getMaxCapturesFromPosition(board, &board->square[i].position, &board->square[i].piece, pieceColor, &idStack);
+            possibleCaptures = getMaxCapturesFromPositionNumber(board, &board->square[i].position, &board->square[i].piece, pieceColor, &idStack);
             if (possibleCaptures > maxPossibleCaptures)
             {
                 maxPossibleCaptures = possibleCaptures;
@@ -1233,10 +1295,17 @@ float evaluatePos(Board *board, enum PieceColor turn)
 
 // var pesoGlobal, estado, primeiraJogadaRamificação;
 
-
-void generateComputerMovement(Board *board, MovementSequence *movementSequence, int level, int depth, float *scoreAcc, MovementSequence *computerMovement)
+MovementSequence *getPossibleMovementsFromPosition(Board *board, Position testPosition)
 {
-    float localScoreSum = *scoreAcc;
+    MovementSequence *possibleMovements[]
+
+
+}
+
+void generateComputerMovement(Board *board, MovementSequence *movementSequence, int level, int depth, float *biggestScoreAcc, MovementSequence *computerMovement)
+{
+    //TODO: adicionar lógica de passar o primeiro movimentos às ooutras
+    float localScoreSum = *biggestScoreAcc;
     enum PieceColor thisLevelTurn = level % 2;
 
     checkMovementSequence(board, movementSequence, thisLevelTurn);
@@ -1255,6 +1324,55 @@ void generateComputerMovement(Board *board, MovementSequence *movementSequence, 
 
     localScoreSum += evaluatePos(board, thisLevelTurn);
 
+    MovementSequence possibleMovements [PIECES_PER_PLAYER][MAX_FIRST_CHAIN_MOVE];
+
+    // 11 12 13 14 15 16 17 18
+    // 21 22 23 24 25 26 27 28
+    // 31 32 23 24 25 26 27 28
+    // 41 42 23 24 25 26 27 28
+    // 11 12 13 14 15 16 17 18
+    // 21 22 23 24 25 26 27 28
+    // 31 32 23 24 25 26 27 28
+    // 41 42 23 24 25 26 27 28
+    // 11 12 13 14 15 16 17 18
+    // 21 22 23 24 25 26 27 28
+    // 31 32 23 24 25 26 27 28
+    // 41 42 23 24 25 26 27 28
+    // 41 42 23 24 25 26 27 28
+
+    //11 = 1 peça - cima direita
+    //21 = 1 peça - cima esquerda
+    //11 - seqMoviments
+
+    Position position;
+
+    if(level < depth)
+    {
+        for (size_t i = 0; i < TOTAL_SQUARES; i++)
+        {
+            position = board->square[i].position;
+            //if
+                //possibleMovements[i][j] = getPossibleMovementsFromPosition()
+                
+        }
+    }
+    
+    //-----------------------------to supondo
+
+
+        int possibleMovementsLength = sizeof(possibleMovementsLength)/sizeof(MovementSequence);
+        for (size_t i = 0; i < PIECES_PER_PLAYER; i++)
+        {
+            for(size_t j = 0; j < MAX_FIRST_CHAIN_MOVE; j++)
+            {
+                if (possibleMovements[i][j].movementType != Invalid){
+                    generateComputerMovement(board, &possibleMovements[i][j], level+1, depth, biggestScoreAcc, computerMovement);
+                }
+            }
+        }
+    
+
+   
     
 
 //     if (nivel < limite){
