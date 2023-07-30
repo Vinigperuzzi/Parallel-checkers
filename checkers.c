@@ -7,17 +7,17 @@
 //////////////// -- DEFINE's -- ////////////////
 
 #define SQUARES_PER_ROW 8
-#define TOTAL_SQUARES SQUARES_PER_ROW * SQUARES_PER_ROW
-#define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW/2
-#define CENTRAL_SQUARES PLAYABLE_SQUARES_PER_ROW/2
+#define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
+#define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
+#define CENTRAL_SQUARES PLAYABLE_SQUARES_PER_ROW / 2
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
 #define MAX_FIRST_CHAIN_MOVE 13
 #define WEIGHT_DIFF_PIECES 0.5
 #define WEIGHT_QTD_KINGS 0.25
-#define WEIGHT_EMINENT_KINGS 0.150 //pieces one square from promotion
-#define WEIGHT_POSSIBLE_KINGS 0.5 //pieces two squares from promotion
+#define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
+#define WEIGHT_POSSIBLE_KINGS 0.5  // pieces two squares from promotion
 #define WEIGHT_CENTRAL_PIECES 0.5
 
 //////////////// -- DATA TYPE's -- ////////////////
@@ -91,6 +91,12 @@ typedef struct STMovementSequence
     enum MovementType movementType;
 } MovementSequence;
 
+typedef struct STPossibleMovement
+{
+    MovementSequence possibleMovementList[MAX_FIRST_CHAIN_MOVE];
+    int numberOfPossibleMovements;
+} PossibleMovements;
+
 typedef struct STPathInfo
 {
     int piecesInTheWay;
@@ -105,7 +111,6 @@ enum Adjacency
     AdjacentBack
 };
 
-
 enum Winner
 {
     NoOne,
@@ -119,7 +124,7 @@ char whiteSquare[9] = "\033[47m";
 char blackSquare[9] = "\033[40m";
 enum PieceColor turn = White;
 float globalScore = 0;
-MovementSequence firstMovement;
+MovementSequence computerMovement;
 
 //////////////// -- STACK IMPL -- ////////////////
 
@@ -557,10 +562,11 @@ Piece getPiece(Board *board, Position position)
     return board->square[getIndexOfPosition(position)].piece;
 }
 
-//This function get some useful informations about the "path" between origin and destiny positions
-
 PathInfo getPathInfo(Board *board, Position origin, Position destiny)
 {
+
+    // This function get some useful informations about the "path" between origin and destiny positions
+
     PathInfo pathInfo;
     pathInfo.piecesInTheWay = 0;
     Piece lastPieceInTheWay;
@@ -569,9 +575,9 @@ PathInfo getPathInfo(Board *board, Position origin, Position destiny)
 
     Position position = origin;
 
-/*The signal of the int variable distanceMovedRow/Col indicates if the piece is moving towards or backwards 
-on the board, and if its to the left or right diagonal. We use that information to correctly increment
-or decrement the position.col/row varibles and obtain the squares belonging to the path*/
+    /*The signal of the int variable distanceMovedRow/Col indicates if the piece is moving towards or backwards
+    on the board, and if its to the left or right diagonal. We use that information to correctly increment
+    or decrement the position.col/row varibles and obtain the squares belonging to the path*/
 
     if (distanceMovedRow > 0)
     {
@@ -701,7 +707,7 @@ enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving
                 return Invalid;
             }
         }
-        else if (isAdjacent(move->origin, move->destiny) == AdjacentFront && pieceMoving->color == White) 
+        else if (isAdjacent(move->origin, move->destiny) == AdjacentFront && pieceMoving->color == White)
         {
             return Move;
         }
@@ -709,7 +715,7 @@ enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving
         {
             return Move;
         }
-        else        //trying to move backwards with a piece of type Checker
+        else // trying to move backwards with a piece of type Checker
         {
             return Invalid;
         }
@@ -740,11 +746,17 @@ enum MovementType checkMovement(Board *board, Movement *move, Piece *pieceMoving
     }
 }
 
-// Given a certain position and a piece to test, calculates the maximum amount of captures
-// possible starting a capturing chain in that position
-
-int getMaxCapturesFromPositionNumber(Board *board, Position *originPosition, Piece *pieceTested, enum PieceColor turn, IdStack *idStack)
+int getNumberOfMaxCapturesFromPosition(
+    Board *board,
+    Position *originPosition,
+    Piece *pieceTested,
+    enum PieceColor turn,
+    IdStack *idStack)
 {
+
+    // Given a certain position and a piece to test, calculates the maximum amount of captures
+    // possible starting a capturing chain in that position
+
     int captures = 0;
     int maxCaptures = 0;
     Movement testMovement;
@@ -761,11 +773,11 @@ int getMaxCapturesFromPositionNumber(Board *board, Position *originPosition, Pie
     {
         testSquare = board->square[i];
 
-        // if the originPosition has no piece in it, it needs to activate the 
+        // if the originPosition has no piece in it, it needs to activate the
         // chainAttack Flag on calling the checkMovement function
 
         if (testSquare.state == Free && isDiagonal(*originPosition, board->square[i].position))
-        {    
+        {
             testMovement.destiny = testSquare.position;
             if (board->square[getIndexOfPosition(*originPosition)].state == Free)
             {
@@ -783,7 +795,7 @@ int getMaxCapturesFromPositionNumber(Board *board, Position *originPosition, Pie
                 {
                     pushIdStack(idStack, testPathInfo.lastPieceInTheWay.id);
                     captures++;
-                    captures = captures + getMaxCapturesFromPositionNumber(board, &testMovement.destiny, pieceTested, turn, idStack);
+                    captures = captures + getNumberOfMaxCapturesFromPosition(board, &testMovement.destiny, pieceTested, turn, idStack);
                 }
             }
         }
@@ -801,13 +813,19 @@ int getMaxCapturesFromPositionNumber(Board *board, Position *originPosition, Pie
     return maxCaptures;
 }
 
-// Given a certain position and a piece to test, calculates the maximum amount of captures
-// possible starting a capturing chain in that position and returns the movement sequence to make those captures
-
-void getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *pieceTested, enum PieceColor turn, IdStack *idStack)
+void getPossibleAttackChainsFromPosition(
+    Board *board,
+    Position *originPosition,
+    Piece *pieceTested,
+    enum PieceColor turn,
+    IdStack *idStack,
+    MovementSequence possibleAttackChain,
+    PossibleMovements *possibleMovements)
 {
-    int captures = 0;
-    int maxCaptures = 0;
+
+    // Given a certain position and a piece to test, this function adds to the possibleMovementsList every
+    // possible and valid attack chain beggining in that position
+
     Movement testMovement;
     enum MovementType testMoveType;
     Square testSquare;
@@ -815,18 +833,19 @@ void getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *p
 
     // iterates over the board looking for black squares free positions. When finds one, test the movement
     // originating in originPosition with destiny in that position. If its an attack, verifies if it hasn't
-    // already been made checking the idStack. If it doesn't, increment the captures counter and calls this function
-    // again, recursively, passing the testMovement.destiny as argument and adding its return to the captures counter
+    // already been made checking the idStack. If it doesn't, adds the movement to the possibleAttackChain
+    // and calls this function again, recursively, passing the testMovement.destiny and the actual
+    // possibleAttackChain as argument.
 
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
         testSquare = board->square[i];
 
-        // if the originPosition has no piece in it, it needs to activate the 
+        // if the originPosition has no piece in it, it needs to activate the
         // chainAttack Flag on calling the checkMovement function
 
         if (testSquare.state == Free && isDiagonal(*originPosition, board->square[i].position))
-        {    
+        {
             testMovement.destiny = testSquare.position;
             if (board->square[getIndexOfPosition(*originPosition)].state == Free)
             {
@@ -843,30 +862,41 @@ void getMaxCapturesFromPosition(Board *board, Position *originPosition, Piece *p
                 if (!hasId(idStack, testPathInfo.lastPieceInTheWay.id))
                 {
                     pushIdStack(idStack, testPathInfo.lastPieceInTheWay.id);
-                    captures++;
-                    captures = captures + getMaxCapturesFromPositionNumber(board, &testMovement.destiny, pieceTested, turn, idStack);
+                    possibleAttackChain.seqMovements[possibleAttackChain.numberOfMovements] = testMovement;
+                    possibleAttackChain.numberOfMovements++;
+                    getPossibleAttackChainsFromPosition(board, &testMovement.destiny, pieceTested, turn,
+                                                        idStack, possibleAttackChain, possibleMovements);
                 }
             }
         }
-        if (captures > maxCaptures)
+
+        // When there is no more attack that can be made, verify if possibleAttackChain is valid and if it does,
+        // adds it to the possibleMovementsList, cause it means that it reached the end of an valid attack chain
+
+        if (possibleAttackChain.numberOfMovements > 0)
         {
-            maxCaptures = captures;
+            checkMovementSequence(board, &possibleAttackChain, turn);
+            if (possibleAttackChain.movementType == Attack)
+            {
+                possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = possibleAttackChain;
+                possibleMovements->numberOfPossibleMovements++;
+            }
         }
-        if (captures > 0) // if it achieved to identify one possible capture, the function removes
-        {                 // the possible caputured piece id from the idStack before returning
-            popIdStack(idStack);
+        if (possibleAttackChain.numberOfMovements > 0)
+        {                        // if it achieved to identify one possible capture, the function removes
+            popIdStack(idStack); // the possible caputured piece id from the idStack before returning
         }
-        captures = 0;
     }
 
-    return maxCaptures;
+    return;
 }
-
-// This function gets, for a given state of the board, the maximum possible ammount
-// of captures that can be made in one turn by the piece color passaed as argument
 
 int getMaxPossibleCaptures(Board *board, enum PieceColor pieceColor)
 {
+
+    // This function gets, for a given state of the board, the maximum possible ammount
+    // of captures that can be made in one turn by the piece color passaed as argument
+
     IdStack idStack;
     int maxPossibleCaptures = 0;
     int possibleCaptures;
@@ -880,7 +910,7 @@ int getMaxPossibleCaptures(Board *board, enum PieceColor pieceColor)
                                      // on the simulated attack chain
         if (board->square[i].state == Occupied && board->square[i].piece.color == pieceColor)
         {
-            possibleCaptures = getMaxCapturesFromPositionNumber(board, &board->square[i].position, &board->square[i].piece, pieceColor, &idStack);
+            possibleCaptures = getNumberOfMaxCapturesFromPosition(board, &board->square[i].position, &board->square[i].piece, pieceColor, &idStack);
             if (possibleCaptures > maxPossibleCaptures)
             {
                 maxPossibleCaptures = possibleCaptures;
@@ -900,7 +930,7 @@ void capturePiece(Board *board, Piece *piece)
 
     if (piece->color == White)
     {
-        if(piece->type == King)
+        if (piece->type == King)
         {
             board->whiteKings--;
         }
@@ -908,7 +938,7 @@ void capturePiece(Board *board, Piece *piece)
     }
     else
     {
-        if(piece->type == King)
+        if (piece->type == King)
         {
             board->blackKings--;
         }
@@ -945,7 +975,7 @@ void checkMovementSequence(Board *board, MovementSequence *movementSequence, enu
     if (movementType == Attack)
     {
         for (size_t i = 1; i < movementSequence->numberOfMovements; i++)
-        {   
+        {
             movementType = checkMovement(board, &movementSequence->seqMovements[i], &pieceMoving, turn, 1);
             printf("\nMoveType: %d", movementType);
             if (movementType != Attack)
@@ -982,22 +1012,22 @@ enum Winner checkWinCondition(Board *board, enum PieceColor turn)
         return BlackWon;
     }
 
-    // Tests for each piece of the current turn player if it has any possible
-    // movement to make. If it hasn't, then the opposite color player won
+    // Tests for each piece of the opponent of the current turn player if it has any possible
+    // movement to make. If it hasn't, then the player won
 
     Movement testMove;
     Piece testPiece;
 
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
-        if (board->square[i].state == Occupied && board->square[i].piece.color == turn)
+        if (board->square[i].state == Occupied && board->square[i].piece.color != turn)
         {
             testMove.origin = board->square[i].position;
             for (size_t j = 0; j < TOTAL_SQUARES; ++j)
             {
                 testPiece = board->square[getIndexOfPosition(testMove.origin)].piece;
                 testMove.destiny = board->square[j].position;
-                if (checkMovement(board, &testMove, &testPiece, turn, 0) != Invalid)
+                if (checkMovement(board, &testMove, &testPiece, !turn, 0) != Invalid)
                 {
                     return NoOne;
                 }
@@ -1007,11 +1037,11 @@ enum Winner checkWinCondition(Board *board, enum PieceColor turn)
 
     if (turn == Black)
     {
-        return WhiteWon;
+        return BlackWon;
     }
     else if (turn == White)
     {
-        return BlackWon;
+        return WhiteWon;
     }
 }
 
@@ -1084,14 +1114,14 @@ void printTurn()
 //         case Move:
 //             movePiece(&board, movementSequence.seqMovements[0]);
 //             printBoard(&board, 0);
-//             swapTurn(&fron);    
 //             checkWinCondition(&board);
+//             swapTurn(&fron);
 //             break;
 //         case Attack:
 //             makeAttack(&board, &movementSequence);
 //             printBoard(&board, 0);
-//             swapTurn();
 //             checkWinCondition(&board);
+//             swapTurn();
 //             break;
 //         case Invalid:
 //             printf("\n\t\t\tThis movement is not allowed. Try another one.\n");
@@ -1103,7 +1133,7 @@ void printTurn()
 // }
 
 Board parseBoardFromMatrix(int matrixBoard[8][8])
-{   
+{
     Board board;
     board.blackPieces = 0;
     board.whitePieces = 0;
@@ -1117,7 +1147,7 @@ Board parseBoardFromMatrix(int matrixBoard[8][8])
     for (size_t i = 0; i < SQUARES_PER_ROW; i++)
     {
         for (size_t j = 0; j < SQUARES_PER_ROW; j++)
-        {   
+        {
             squareIndex = i * SQUARES_PER_ROW + j;
             currentPosition.row = i;
             currentPosition.col = j;
@@ -1186,7 +1216,7 @@ MovementSequence parseMovementSequenceFromArray(int numberOfItens, int movements
     MovementSequence movementSequence;
     movementSequence.numberOfMovements = numberOfItens / 4;
 
-    for (size_t i = 0, j = 0; i < movementSequence.numberOfMovements; i++, j+=4)
+    for (size_t i = 0, j = 0; i < movementSequence.numberOfMovements; i++, j += 4)
     {
         movementSequence.seqMovements[i].origin.row = movements[j];
         movementSequence.seqMovements[i].origin.col = movements[j + 1];
@@ -1208,11 +1238,11 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
         {
             currentPosition.col = j;
             squareIndex = getIndexOfPosition(currentPosition);
-            if(board->square[squareIndex].state == Occupied)
+            if (board->square[squareIndex].state == Occupied)
             {
-                if(board->square[squareIndex].piece.color == White)
+                if (board->square[squareIndex].piece.color == White)
                 {
-                    if(board->square[squareIndex].piece.type == Checker)
+                    if (board->square[squareIndex].piece.type == Checker)
                     {
                         matrixBoard[i][j] = 1;
                     }
@@ -1223,14 +1253,14 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
                 }
                 else
                 {
-                    if(board->square[squareIndex].piece.type == Checker)
-                        {
-                            matrixBoard[i][j] = 2;
-                        }
-                        else
-                        {
-                            matrixBoard[i][j] = 4;
-                        }
+                    if (board->square[squareIndex].piece.type == Checker)
+                    {
+                        matrixBoard[i][j] = 2;
+                    }
+                    else
+                    {
+                        matrixBoard[i][j] = 4;
+                    }
                 }
             }
             else
@@ -1238,7 +1268,6 @@ void updateMatrixBoard(Board *board, int matrixBoard[8][8])
                 matrixBoard[i][j] = 0;
             }
         }
-        
     }
 }
 
@@ -1247,7 +1276,7 @@ int checkQtdPiecesInRank(Board board, enum PieceColor pieceColor, int rank)
     int qtdPieces = 0;
     for (int i = 0; i < SQUARES_PER_ROW; i++)
     {
-        if(board.square[(rank*SQUARES_PER_ROW)+i].piece.color == pieceColor)
+        if (board.square[(rank * SQUARES_PER_ROW) + i].piece.color == pieceColor)
         {
             qtdPieces++;
         }
@@ -1273,106 +1302,158 @@ int checkCentralPieces(Board board, enum PieceColor pieceColor)
 
 float evaluatePos(Board *board, enum PieceColor turn)
 {
-    if (checkWinCondition(board, turn) == turn+2)
+
+    // Ideia: Adicionar valorização de capturar uma dama
+
+    if (checkWinCondition(board, turn) == turn + 2)
     {
         return 10;
     }
+
     float scoreQtdpieces;
     float scoreKings;
     if (!turn)
     {
-        scoreQtdpieces = (board->whitePieces - board->blackPieces)/PIECES_PER_PLAYER*WEIGHT_DIFF_PIECES;
-        scoreKings = (board->whiteKings - board->blackKings)/PIECES_PER_PLAYER*WEIGHT_QTD_KINGS;
+        scoreQtdpieces = (board->whitePieces - board->blackPieces) / (PIECES_PER_PLAYER * WEIGHT_DIFF_PIECES);
+        scoreKings = (board->whiteKings - board->blackKings) / (PIECES_PER_PLAYER * WEIGHT_QTD_KINGS);
     }
     else
     {
-        scoreQtdpieces = (board->blackPieces - board->whitePieces)/PIECES_PER_PLAYER*WEIGHT_DIFF_PIECES;
-        scoreKings = (board->blackKings - board->whiteKings)/PIECES_PER_PLAYER*WEIGHT_QTD_KINGS;
+        scoreQtdpieces = (board->blackPieces - board->whitePieces) / (PIECES_PER_PLAYER * WEIGHT_DIFF_PIECES);
+        scoreKings = (board->blackKings - board->whiteKings) / (PIECES_PER_PLAYER * WEIGHT_QTD_KINGS);
     }
-    float scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6)/PLAYABLE_SQUARES_PER_ROW*WEIGHT_EMINENT_KINGS;
-    float scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5)/PLAYABLE_SQUARES_PER_ROW*WEIGHT_POSSIBLE_KINGS;
-    float scoreCentralPieces = checkCentralPieces(*board, turn)/CENTRAL_SQUARES*WEIGHT_CENTRAL_PIECES;
+
+    float scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6) / (PLAYABLE_SQUARES_PER_ROW * WEIGHT_EMINENT_KINGS);
+    float scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5) / (PLAYABLE_SQUARES_PER_ROW * WEIGHT_POSSIBLE_KINGS);
+    float scoreCentralPieces = checkCentralPieces(*board, turn) / (CENTRAL_SQUARES * WEIGHT_CENTRAL_PIECES);
     float pesoPosicao = scoreQtdpieces + scoreKings + scoreEminentKings + scorePossibleKings + scoreCentralPieces;
     return pesoPosicao;
 }
 
-// var pesoGlobal, estado, primeiraJogadaRamificação;
+void getPossibleMovementsFromPosition(
 
-MovementSequence *getPossibleMovementsFromPosition(Board *board, Position testPosition)
+    // This function adds to the possibleMoventsList all valid movements possible to make from a given position
+    // and state of the board
+
+    Board *board,
+    PossibleMovements *possibleMovements,
+    Position *testPosition,
+    enum PieceColor turn)
 {
-    //MovementSequence *possibleMovements[]
+    Movement auxMovement;
+    Square auxSquare;
+    MovementSequence auxMovementSeq;
 
+    possibleMovements->numberOfPossibleMovements = 0;
+    auxMovement.origin = *testPosition;
 
+    // checks possible movements of the type Move and adds them to the possibleMovementsList
+    // if identifies at least one possible attack, it means that because of the rules of the games, no move
+    // can be made. So it calls the getPossibleAttackChainsFromPosition passing a pointer to possibleMovements,
+    // so the function can populate it with the possible and valid attacks that can be made
+
+    for (size_t i = 0; i < TOTAL_SQUARES; ++i)
+    {
+        auxSquare = board->square[i];
+        if (auxSquare.state == Free && isDiagonal(*testPosition, auxSquare.position))
+        {
+            auxMovement.destiny = auxSquare.position;
+            auxMovementSeq.numberOfMovements = 1;
+            auxMovementSeq.seqMovements[0] = auxMovement;
+            checkMovementSequence(board, &auxMovementSeq, turn);
+            if (auxMovementSeq.movementType == Move)
+            {
+                possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = auxMovementSeq;
+                possibleMovements->numberOfPossibleMovements++;
+            }
+            else if (auxMovementSeq.movementType == Attack)
+            {
+                auxMovementSeq.numberOfMovements = 0;
+                IdStack idStack;
+                initializeIdStack(&idStack);
+                getPossibleAttackChainsFromPosition(board, &testPosition,
+                                                    &board->square[getIndexOfPosition(*testPosition)].piece,
+                                                    turn, &idStack, auxMovementSeq, possibleMovements);
+
+                return;
+            }
+        }
+    }
+    return;
 }
 
-void generateComputerMovement(Board *board, MovementSequence *movementSequence, int level, int depth, float *biggestScoreAcc, MovementSequence computerMovement)
+void generateComputerMovement(
+    Board *board,
+    MovementSequence *movementSequence,
+    int level,
+    int depth,
+    float *biggestScoreAcc,
+    MovementSequence firstMovement)
 {
+
     float localScoreSum = *biggestScoreAcc;
     enum PieceColor thisLevelTurn = level % 2;
 
-    checkMovementSequence(board, movementSequence, thisLevelTurn);
-
-    switch (movementSequence->movementType)
+    if (level > 1)
     {
-    case Move:
-        movePiece(&board, movementSequence->seqMovements[0]);
-        break;
-    case Attack:
-        makeAttack(&board, &movementSequence);
-        break;
-    default:
-        break;
+        printf("\nDebug: level: %d MoveType: %d", level, movementSequence->movementType);
+
+        switch (movementSequence->movementType)
+        {
+        case Move:
+            movePiece(&board, movementSequence->seqMovements[0]);
+            break;
+        case Attack:
+            makeAttack(&board, &movementSequence);
+            break;
+        default:
+            break;
+        }
+
+        localScoreSum += evaluatePos(board, thisLevelTurn);
+        printf("\nDebug: LocalScoreSum: %f", localScoreSum);
     }
 
-    localScoreSum += evaluatePos(board, thisLevelTurn);
+    PossibleMovements possibleMovements[PIECES_PER_PLAYER];
+    Square auxSquare;
+    int possibleMovesIndexCounter = 0;
 
-    MovementSequence possibleMovements [PIECES_PER_PLAYER][MAX_FIRST_CHAIN_MOVE];
-
-    // 11 12 13 14 15 16 17 18
-    // 21 22 23 24 25 26 27 28
-    // 31 32 23 24 25 26 27 28
-    // 41 42 23 24 25 26 27 28
-    // 11 12 13 14 15 16 17 18
-    // 21 22 23 24 25 26 27 28
-    // 31 32 23 24 25 26 27 28
-    // 41 42 23 24 25 26 27 28
-    // 11 12 13 14 15 16 17 18
-    // 21 22 23 24 25 26 27 28
-    // 31 32 23 24 25 26 27 28
-    // 41 42 23 24 25 26 27 28
-    // 41 42 23 24 25 26 27 28
-
-    //11 = 1 peça - cima direita
-    //21 = 1 peça - cima esquerda
-    //11 - seqMoviments
-
-    Position position;
-
-    if(level < depth)
+    if (level < depth)
     {
         for (size_t i = 0; i < TOTAL_SQUARES; i++)
         {
-            position = board->square[i].position;
-            //if
-                //possibleMovements[i][j] = getPossibleMovementsFromPosition()
-                
-        }
-    
-    //-----------------------------to supondo
-
-
-        int possibleMovementsLength = sizeof(possibleMovementsLength)/sizeof(MovementSequence);
-        for (size_t i = 0; i < PIECES_PER_PLAYER; i++)
-        {
-            for(size_t j = 0; j < MAX_FIRST_CHAIN_MOVE; j++)
+            auxSquare = board->square[i];
+            if (auxSquare.state == Occupied && auxSquare.piece.color == thisLevelTurn)
             {
-                if (possibleMovements[i][j].movementType != Invalid){
-                    if (level == 1)
-                    {
-                        computerMovement = possibleMovements[i][j];
-                    }
-                    generateComputerMovement(board, &possibleMovements[i][j], level+1, depth, biggestScoreAcc, computerMovement);
+                getPossibleMovementsFromPosition(board, &possibleMovements[possibleMovesIndexCounter],
+                                                 &auxSquare.position, thisLevelTurn);
+                // DEBUG
+                Movement debugMove;
+                for (size_t k = 0; k < possibleMovements[possibleMovesIndexCounter].numberOfPossibleMovements; k++)
+                {
+                    debugMove = possibleMovements[possibleMovesIndexCounter].possibleMovementList[k].seqMovements[0];
+                    printf("\nDebug 2: Iter %d Origin: %d %d Destiny %d %d", i, debugMove.origin.row,
+                           debugMove.origin.col, debugMove.destiny.row,
+                           debugMove.destiny.col);
                 }
+
+                // DEBUG
+                possibleMovesIndexCounter++;
+            }
+        }
+
+        printf("\nDebug: indexCounter: %d", possibleMovesIndexCounter);
+
+        for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
+        {
+            for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
+            {
+                if (level == 1)
+                {
+                    firstMovement = possibleMovements[i].possibleMovementList[j];
+                }
+                generateComputerMovement(board, &possibleMovements[i].possibleMovementList[j], level + 1,
+                                         depth, biggestScoreAcc, firstMovement);
             }
         }
     }
@@ -1381,87 +1462,103 @@ void generateComputerMovement(Board *board, MovementSequence *movementSequence, 
         if (localScoreSum > globalScore)
         {
             globalScore = localScoreSum;
-            firstMovement = computerMovement;
+            computerMovement = firstMovement;
+            printf("\nDebug: Chegou no if! Computer movement: %d %d - %d %d", computerMovement.seqMovements[0].origin.row, computerMovement.seqMovements[0].origin.col, computerMovement.seqMovements[0].destiny.row, computerMovement.seqMovements[0].destiny.col);
         }
     }
-    
+}
 
-   
-    
+void makeComputerMovement(Board *board, MovementSequence *computerMovement, enum PieceColor turn)
+{
+    checkMovementSequence(board, computerMovement, turn);
 
-//     if (nivel < limite){
-//         for (cada peça da cor da jogada no tabuleiro){
-//             for (cada um dos 8 movimentos possivelmente possíveis ([1][1], [1][-1], [-1][1], [-1][-1], [2][2]...)){
-//                 if (movimento possivel){
-//                     array.push(movimento)
-//                 }
-//             }
-//         }
-//         for (cada jogada do array criado){
-//             jogadaMaquina(tabuleiroLocal, jogadaDoArray, nivel++, limite, somaLocal);
-//         }
-//     }
-//     else {
-//         if(somaLocal > pesoGlobal){
-//             pesoGlobal = somaLocal;
-//             primeiraJogadaRamificação = ramificaçãoJogadas[1];
-//         }
-//     }
+    switch (computerMovement->movementType)
+    {
+    case Move:
+        movePiece(board, computerMovement->seqMovements[0]);
+        break;
+
+    case Attack:
+        makeAttack(board, &computerMovement->seqMovements);
+        break;
+
+    default:
+        break;
+    }
 }
 
 int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn)
 {
+
+    // Function to establish connection between front and back end. The front end calls this function passing
+    // the state of the board and a list of movements represented by a matrix  and a vector, respectively, in
+    // addition to the current turn. This function then parses this data, converting it in the data structures
+    // used here, then evaluates the movement that is trying to be made and act upon its type
+
     turn = *frontEndTurn;
-    //Debug emergencial - Socorro
-    printf("\n\nQuantidade recebida: %d\n", numberOfItens);
-    printf("\n\nMovimentos recebidos:\n");
-    for (int i = 0; i < numberOfItens; i++) {
-        printf("%d ", listOfMovements[i]);
-    }
-    printf("\n");
-    for (int i = 7; i>=0; i--){
-        for (int j = 0; j < 8; j++){
-            printf("%d ", matrixBoard[i][j]);
-        }
-        printf("\n");
-    }
+
+    // parse data structures
 
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
-    checkMovementSequence(&board, &movementSequence, turn);
-    printf("\n\nMove: %d", movementSequence.movementType);
     enum Winner winner;
+    float biggestScoreAcc = 0;
+
+    checkMovementSequence(&board, &movementSequence, turn);
 
     switch (movementSequence.movementType)
     {
     case Move:
         movePiece(&board, movementSequence.seqMovements[0]);
-        updateMatrixBoard(&board, matrixBoard);
-     //   printBoard(&board, 0);
-        swapTurn(frontEndTurn);
+        // printBoard(&board, 0);
         winner = checkWinCondition(&board, turn);
-        if(winner != NoOne)
+        if (winner != NoOne) // check if someone won the game. If no one won, return the move authorization
         {
             return winner;
         }
+        swapTurn(frontEndTurn);
+        generateComputerMovement(&board, &movementSequence, 1, 2, &biggestScoreAcc, movementSequence);
+        globalScore = 0;
+
+        makeComputerMovement(&board, &computerMovement, turn);
+        updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
+        winner = checkWinCondition(&board, turn);
+        if (winner != NoOne) // check if someone won the game. If no one won, return the move authorization
+        {
+            return winner;
+        }
+        swapTurn(frontEndTurn);
         return Move;
         break;
+
     case Attack:
         makeAttack(&board, &movementSequence);
-        updateMatrixBoard(&board, matrixBoard);
-   //     printBoard(&board, 0);
-        swapTurn(frontEndTurn);
+        // printBoard(&board, 0);
         winner = checkWinCondition(&board, turn);
-        if(winner != NoOne)
+        if (winner != NoOne) // check if someone won the game. If no one won, return the attack authorization
         {
             return winner;
         }
+        swapTurn(frontEndTurn);
+        generateComputerMovement(&board, &movementSequence, 1, 2, &biggestScoreAcc, movementSequence);
+        globalScore = 0;
+
+        makeComputerMovement(&board, &computerMovement, turn);
+        updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
+        winner = checkWinCondition(&board, turn);
+        if (winner != NoOne) // check if someone won the game. If no one won, return the move authorization
+        {
+            return winner;
+        }
+        swapTurn(frontEndTurn);
         return Attack;
         break;
+
     case Invalid:
         printf("\n\t\t\tThis movement is not allowed. Try another one.\n");
         return Invalid;
         break;
+
     default:
         break;
     }
@@ -1469,7 +1566,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
 int main(void)
 {
-    // int matrix[8][8] = 
+    // int matrix[8][8] =
     // {
     //     {1, 0, 1, 0, 1, 0, 1, 0},
     //     {0, 1, 0, 1, 0, 1, 0, 1},
@@ -1479,7 +1576,7 @@ int main(void)
     //     {0, 2, 0, 2, 0, 2, 0, 2},
     //     {2, 0, 2, 0, 2, 0, 2, 0},
     //     {0, 2, 0, 2, 0, 2, 0, 2}
-    // };  
+    // };
 
     // int numOfItens = 4;
     // int list_moves[4] = {2, 0, 3, 1};
@@ -1533,8 +1630,4 @@ int main(void)
     // playGame(board);
 }
 
-
-//TO DO LIST
-
-//1- Adicionar mmovementType à estrutura Movement
-
+// TO DO LIST
