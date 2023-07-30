@@ -70,10 +70,14 @@ def define_initial_pos():
     status_label.config(text="Funcionalidade a ser implementada, aguarde...", fg="yellow")  # Update the status label text
     print_board()
 
+def format_moves_to_string(moves):
+    columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    x1, y1, x2, y2 = moves[0], moves[1], moves[2], moves[3]
+    return f"{columns[y1]}{x1 + 1}-{columns[y2]}{x2 + 1}"
+
 def submit_move():
     global list_of_moves, qtd_moves, which_movement
     print("Submeter Jogada")
-    global qtd_moves, list_of_moves
     print(list_of_moves)
     print(board_pos)
     if (not len(list_of_moves)):
@@ -82,10 +86,14 @@ def submit_move():
     list_of_moves.pop(); list_of_moves.pop()    #Take back the duplication from list_of_moves for the last move in chain
     which_movement = 0
     test = entry_point()
-    if not test:
+    if test[0] == -1:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
+    elif test[0] == -2:
+        status_label.config(text="Brancas ganharam", fg="blue")  # Update the status label text
+    elif test[0] == -3:
+        status_label.config(text="Negras ganharam", fg="blue")  # Update the status label text
     else:
-        status_label.config(text="Jogada registrada", fg="green")  # Update the status label text
+        status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
     print_board()
 
 def print_coordinates(event):
@@ -200,13 +208,24 @@ def entry_point():
 
     print("\nfront_end_turn voltou como:", front_end_turn)
 
+    machine_move = []
+    for i in range(4):
+        machine_move.append(moves_c[i])
+    if test == 0:
+        machine_move[0] = -1
+    elif test == 3:
+        machine_move[0] = -2
+    elif test == 4:
+        machine_move[0] = -3
+
     # Parse the matrix send to C back to list pf lists in python
     for i in range(8):
         for j in range(8):
             board_pos[i][7-j] = board_c[i][j]
     qtd_moves = 0
     list_of_moves.clear()
-    return test
+    #return test
+    return machine_move
 
 # Color - for style
 color_primary = "#53a08e"  # Verde suave
