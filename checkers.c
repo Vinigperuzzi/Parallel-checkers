@@ -14,8 +14,8 @@
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
 #define MAX_FIRST_CHAIN_MOVE 13
-#define WEIGHT_DIFF_PIECES 1.75
-#define WEIGHT_QTD_KINGS 0.75
+#define WEIGHT_DIFF_PIECES 0.5
+#define WEIGHT_QTD_KINGS 0.25
 #define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
 #define WEIGHT_POSSIBLE_KINGS 0.5  // pieces two squares from promotion
 #define WEIGHT_CENTRAL_PIECES 0.5
