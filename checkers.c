@@ -890,7 +890,7 @@ void getPossibleAttackChainsFromPosition
     if (possibleAttackChain.numberOfMovements > 0)
     {
         printf("\nDebug: Chegou no final da Attack Chain");
-        checkMovementSequence(board, &possibleAttackChain, turn);
+        checkMovementSequence(board, &possibleAttackChain, turn, 0);
         if (possibleAttackChain.movementType == Attack)
         {
             printf("\nDebug: E é um ataque valido!");
@@ -961,7 +961,13 @@ void capturePiece(Board *board, Piece *piece)
     }
 }
 
-void checkMovementSequence(Board *board, MovementSequence *movementSequence, enum PieceColor turn)
+void checkMovementSequence
+(
+    Board *board,
+    MovementSequence *movementSequence,
+    enum PieceColor turn,
+    int ignoreMaxCapturesVerificationFlag 
+)
 {
     enum MovementType movementType;
     Piece pieceMoving = board->square[getIndexOfPosition(movementSequence->seqMovements[0].origin)].piece;
@@ -1000,7 +1006,8 @@ void checkMovementSequence(Board *board, MovementSequence *movementSequence, enu
             }
         }
 
-        if (getMaxPossibleCaptures(board, turn) > movementSequence->numberOfMovements)
+        if (getMaxPossibleCaptures(board, turn) > movementSequence->numberOfMovements &&
+            !ignoreMaxCapturesVerificationFlag)
         {
             movementSequence->movementType = Invalid;
             return;
@@ -1384,10 +1391,12 @@ void getPossibleMovementsFromPosition(
     Board *board,
     PossibleMovements *possibleMovements,
     Position *testPosition,
-    enum PieceColor turn)
+    enum PieceColor turn
+)
 {
     Movement auxMovement;
     Square auxSquare;
+    Piece auxPieceMoving;
     MovementSequence auxMovementSeq;
 
     possibleMovements->numberOfPossibleMovements = 0;
@@ -1406,7 +1415,7 @@ void getPossibleMovementsFromPosition(
             auxMovement.destiny = auxSquare.position;
             auxMovementSeq.numberOfMovements = 1;
             auxMovementSeq.seqMovements[0] = auxMovement;
-            checkMovementSequence(board, &auxMovementSeq, turn);
+            checkMovementSequence(board, &auxMovementSeq, turn, 1);
             if (auxMovementSeq.movementType == Move)
             {
                 possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = auxMovementSeq;
@@ -1524,7 +1533,7 @@ void generateComputerMovement
 
 void makeComputerMovement(Board *board, MovementSequence *computerMovement, enum PieceColor turn)
 {
-    checkMovementSequence(board, computerMovement, turn);
+    checkMovementSequence(board, computerMovement, turn, 0);
 
     switch (computerMovement->movementType)
     {
@@ -1559,7 +1568,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
     enum Winner winner;
     float biggestScoreAcc = 0;
 
-    checkMovementSequence(&board, &movementSequence, turn);
+    checkMovementSequence(&board, &movementSequence, turn, 0);
 
     //Todo: Sobreescrever as primeiras 4 posições de listOfMovements com a jogada da máquina, só isso já faz aparecer na interface
 
@@ -1625,8 +1634,59 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
     }
 }
 
+void testFunction1()
+{
+    int matrix[8][8] =
+    {
+        {1, 0, 1, 0, 1, 0, 1, 0},
+        {0, 1, 0, 1, 0, 1, 0, 1},
+        {1, 0, 1, 0, 1, 0, 1, 0},
+        {0, 0, 0, 0, 0, 2, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 2, 0, 2, 0, 2, 0, 2},
+        {2, 0, 2, 0, 0, 0, 2, 0},
+        {0, 2, 0, 2, 0, 2, 0, 2}
+    };
+
+    Board board = parseBoardFromMatrix(matrix);
+    printBoard(&board, 0);
+
+    PossibleMovements possibleMovements[PIECES_PER_PLAYER];
+    Square auxSquare;
+    int possibleMovesIndexCounter = 0;
+    enum PieceColor thisLevelTurn = White;
+    turn = White;
+
+    for (size_t i = 0; i < TOTAL_SQUARES; ++i)
+    {
+        auxSquare = board.square[i];
+        if (auxSquare.state == Occupied && auxSquare.piece.color == thisLevelTurn)
+        {
+            getPossibleMovementsFromPosition(&board, &possibleMovements[possibleMovesIndexCounter],
+                                                &auxSquare.position, thisLevelTurn);
+            possibleMovesIndexCounter++;
+        }
+    }
+
+    for (int i = 0; i < possibleMovesIndexCounter; i++)
+    {
+        if(possibleMovements[i].numberOfPossibleMovements != 0)
+        {
+            printf("\npossibleMovements peca %d", i+1);
+            printPossibleMovements(&possibleMovements[i]);
+        }
+        else
+        {
+            printf("\nNenhum possibleMovement para a peca %d", i+1);
+        }
+    }
+    printf("\n");
+}
+
 int main(void)
 {
+    testFunction1();
+
     // int matrix[8][8] =
     // {
     //     {1, 0, 1, 0, 1, 0, 1, 0},
@@ -1639,13 +1699,13 @@ int main(void)
     //     {0, 2, 0, 2, 0, 2, 0, 2}
     // };
 
+    // Board board = parseBoardFromMatrix(matrix);
+    // printBoard(&board, 0);
+
+
     // int numOfItens = 4;
     // int list_moves[4] = {2, 0, 3, 1};
 
-    // printf("\n\nReturn: %d", entryPoint(matrix, numOfItens, list_moves));
-    // Board board = createBoard();
-    // setPieces(&board);
-    // printBoard(&board, 0);
 
     // TEST HARDCODED POSITIONS
 
