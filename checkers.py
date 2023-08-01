@@ -75,6 +75,19 @@ def format_moves_to_string(moves):
     x1, y1, x2, y2 = moves[0], moves[1], moves[2], moves[3]
     return f"{columns[y1]}{x1 + 1}-{columns[y2]}{x2 + 1}"
 
+def set_end_board(winner):
+    global board_pos
+    for i in range(8):
+        for j in range(8):
+            if (i == 3 or i == 4) and (j == 3 or j == 4):
+                if (winner == -2):
+                    board_pos[i][j] = 3
+                else:
+                    board_pos[i][j] = 4
+            else:
+                board_pos[i][j] = 0
+
+
 def submit_move():
     global list_of_moves, qtd_moves, which_movement
     print("Submeter Jogada")
@@ -89,8 +102,10 @@ def submit_move():
     if test[0] == -1:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
     elif test[0] == -2:
+        set_end_board(test[0])
         status_label.config(text="Brancas ganharam", fg="blue")  # Update the status label text
     elif test[0] == -3:
+        set_end_board(test[0])
         status_label.config(text="Negras ganharam", fg="blue")  # Update the status label text
     else:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")

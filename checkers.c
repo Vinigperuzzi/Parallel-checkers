@@ -1461,13 +1461,15 @@ void generateComputerMovement
     {
         printf("\nDebug: entrou no if level > 1");
 
+        Board tempBoard = *board;
+
         switch (movementSequence->movementType)
         {
         case Move:
-            movePiece(board, movementSequence->seqMovements[0]);
+            movePiece(&tempBoard, movementSequence->seqMovements[0]);
             break;
         case Attack:
-            makeAttack(board, movementSequence);
+            makeAttack(&tempBoard, movementSequence);
             break;
         default:
             break;
@@ -1570,8 +1572,6 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     checkMovementSequence(&board, &movementSequence, turn, 0);
 
-    //Todo: Sobreescrever as primeiras 4 posições de listOfMovements com a jogada da máquina, só isso já faz aparecer na interface
-
     switch (movementSequence.movementType)
     {
     case Move:
@@ -1589,6 +1589,10 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
         printf("\nDebug: computerMovement: ");
         printMovementSequence(&computerMovement);
+        listOfMovements[0] = computerMovement.seqMovements[0].origin.row;
+        listOfMovements[1] = computerMovement.seqMovements[0].origin.col;
+        listOfMovements[2] = computerMovement.seqMovements[0].destiny.row;
+        listOfMovements[3] = computerMovement.seqMovements[0].destiny.col;
         makeComputerMovement(&board, &computerMovement, turn);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
         winner = checkWinCondition(&board, turn);
@@ -1612,7 +1616,10 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         testBoard = board;
         generateComputerMovement(&testBoard, &movementSequence, 1, 2, &biggestScoreAcc, movementSequence);
         globalScore = 0;
-
+        listOfMovements[0] = computerMovement.seqMovements[0].origin.row;
+        listOfMovements[1] = computerMovement.seqMovements[0].origin.col;
+        listOfMovements[2] = computerMovement.seqMovements[0].destiny.row;
+        listOfMovements[3] = computerMovement.seqMovements[0].destiny.col;
         makeComputerMovement(&board, &computerMovement, turn);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
         winner = checkWinCondition(&board, turn);
