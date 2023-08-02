@@ -3,10 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 //////////////// -- DEFINE's -- ////////////////
 
-#define LEVEL_DEPTH 4
+#define LEVEL_DEPTH 6
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -20,6 +21,11 @@
 #define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
 #define WEIGHT_POSSIBLE_KINGS 0.5  // pieces two squares from promotion
 #define WEIGHT_CENTRAL_PIECES 0.5
+#define WEAK_VALUE 1
+#define MEDIUM_WEAK_VALUE 3
+#define MEDIUM_VALUE 5
+#define STRONG_VALUE 7
+#define STRONGEST_VALUE 1000
 
 //////////////// -- DATA TYPE's -- ////////////////
 
@@ -124,7 +130,7 @@ enum Winner
 char whiteSquare[9] = "\033[47m";
 char blackSquare[9] = "\033[40m";
 enum PieceColor turn = White;
-float globalScore = 0;
+int globalScore = INT_MIN;
 MovementSequence computerMovement;
 
 //////////////// -- STACK IMPL -- ////////////////
@@ -1323,33 +1329,44 @@ int checkCentralPieces(Board board, enum PieceColor pieceColor)
     return qtdPieces;
 }
 
-float evaluatePos(Board *board, enum PieceColor turn)
+int evaluatePos(Board *board, enum PieceColor turn)
 {
 
     // Ideia: Adicionar valorização de capturar uma dama
 
-    if (checkWinCondition(board, turn) == turn + 2)
+    if (checkWinCondition(board, turn) == turn + 3)
     {
         return 10;
     }
 
-    float scoreQtdpieces;
-    float scoreKings;
+    int scoreQtdpieces, scoreKings, scoreQtdAdversarypieces, scoreAdvsersaryKings,
+        scoreEminentKings, scorePossibleKings;
+
     if (!turn)
     {
-        scoreQtdpieces = (board->whitePieces - board->blackPieces) / (PIECES_PER_PLAYER * WEIGHT_DIFF_PIECES);
-        scoreKings = (board->whiteKings - board->blackKings) / (PIECES_PER_PLAYER * WEIGHT_QTD_KINGS);
+        scoreQtdpieces = board->whitePieces * MEDIUM_VALUE;
+        scoreKings = board->whiteKings * MEDIUM_VALUE;
+        scoreQtdAdversarypieces = board->blackPieces * MEDIUM_VALUE;
+        scoreAdvsersaryKings = board->blackKings * MEDIUM_VALUE;
+        scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6) * MEDIUM_WEAK_VALUE;
+        scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5) * MEDIUM_WEAK_VALUE;
     }
     else
     {
-        scoreQtdpieces = (board->blackPieces - board->whitePieces) / (PIECES_PER_PLAYER * WEIGHT_DIFF_PIECES);
-        scoreKings = (board->blackKings - board->whiteKings) / (PIECES_PER_PLAYER * WEIGHT_QTD_KINGS);
+        scoreQtdpieces = board->blackKings * MEDIUM_VALUE;
+        scoreKings = board->blackKings * MEDIUM_VALUE;
+        scoreQtdAdversarypieces = board->whitePieces * MEDIUM_VALUE;
+        scoreAdvsersaryKings = board->whiteKings * MEDIUM_VALUE;
+        scoreEminentKings = checkQtdPiecesInRank(*board, turn, 1) * MEDIUM_WEAK_VALUE;
+        scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
     }
 
-    float scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6) / (PLAYABLE_SQUARES_PER_ROW * WEIGHT_EMINENT_KINGS);
-    float scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5) / (PLAYABLE_SQUARES_PER_ROW * WEIGHT_POSSIBLE_KINGS);
-    float scoreCentralPieces = checkCentralPieces(*board, turn) / (CENTRAL_SQUARES * WEIGHT_CENTRAL_PIECES);
-    float pesoPosicao = scoreQtdpieces + scoreKings + scoreEminentKings + scorePossibleKings + scoreCentralPieces;
+    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * STRONG_VALUE;
+    printf("\nPeso teste: %d", scoreQtdCaptures);
+
+    int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
+    int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings + 
+                        scoreEminentKings + scorePossibleKings - scoreQtdCaptures + scoreCentralPieces;
     return pesoPosicao;
 }
 
@@ -1452,14 +1469,15 @@ void generateComputerMovement
     MovementSequence *movementSequence,
     int level,
     int depth,
-    float *biggestScoreAcc,
+    int *biggestScoreAcc,
     MovementSequence firstMovement
 )
 {
 
     printf("\nDebug: entrou na funcao");
 
-    float localScoreSum = *biggestScoreAcc;
+    int localScoreSum = *biggestScoreAcc;
+    int localScore;
     enum PieceColor thisLevelTurn = level % 2;
 
     printf("\nSetou as variaveis.\nlocalScoreSum = %f\nthisLevelTurn = %d\nlevel = %d", localScoreSum, thisLevelTurn, level);
@@ -1482,8 +1500,9 @@ void generateComputerMovement
             break;
         }
 
-        localScoreSum += evaluatePos(board, thisLevelTurn);
-        printf("\nDebug: LocalScoreSum: %f", localScoreSum);
+        localScore = evaluatePos(board, thisLevelTurn);
+        localScoreSum += localScore;
+        printf("\nDebug: LocalScoreSum: %d", localScoreSum);
     }
 
     printf("\nDebug: seguiu o baile");
@@ -1535,11 +1554,17 @@ void generateComputerMovement
     {   
         if (localScoreSum > globalScore)
         {
-            globalScore = localScoreSum;
-            computerMovement = firstMovement;
+            #pragma omp critical
+            {
+                globalScore = localScoreSum;
+                computerMovement = firstMovement;
+            }
             printf("\nDebug: Chegou no if do final da funcao! Computer movement: %d %d - %d %d", computerMovement.seqMovements[0].origin.row, computerMovement.seqMovements[0].origin.col, computerMovement.seqMovements[0].destiny.row, computerMovement.seqMovements[0].destiny.col);
         }
-        printf("\nDebug: Chegou no if do final da funcao mas nao superou o localScore");
+        else
+        {
+            printf("\nDebug: Chegou no if do final da funcao mas nao superou o localScore");
+        }
     }
 }
 
@@ -1584,7 +1609,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     Board testBoard;        //testBoard that the function generateComputerMovement can freely edit
     enum Winner winner;
-    float biggestScoreAcc = 0;
+    int biggestScoreAcc = 0;
 
     // parse data structures
 
@@ -1611,7 +1636,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         printf("\nDebug: computerMovement: ");
         printMovementSequence(&computerMovement);
         makeComputerMovement(&board, &computerMovement, turn);
-        writeComputerMovementOnFrontEnd(&listOfMovements);
+        writeComputerMovementOnFrontEnd(listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
         winner = checkWinCondition(&board, turn);
         if (winner != NoOne) // check if someone won the game. If no one won, return the move authorization
@@ -1635,7 +1660,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &biggestScoreAcc, movementSequence);
         globalScore = 0;
         makeComputerMovement(&board, &computerMovement, turn);
-        writeComputerMovementOnFrontEnd(&listOfMovements);
+        writeComputerMovementOnFrontEnd(listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
         winner = checkWinCondition(&board, turn);
         if (winner != NoOne) // check if someone won the game. If no one won, return the move authorization
