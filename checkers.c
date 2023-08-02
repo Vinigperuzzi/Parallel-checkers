@@ -1461,7 +1461,7 @@ void generateComputerMovement
     {
         printf("\nDebug: entrou no if level > 1");
 
-        Board tempBoard = *board;
+        Board tempBoard = *board;   //testBoard that the functions movePiece and makeAttack can freely edit
 
         switch (movementSequence->movementType)
         {
@@ -1552,6 +1552,16 @@ void makeComputerMovement(Board *board, MovementSequence *computerMovement, enum
     }
 }
 
+
+
+void writeComputerMovementOnFrontEnd(int listOfMovements[])
+{
+    listOfMovements[0] = computerMovement.seqMovements[0].origin.row;
+    listOfMovements[1] = computerMovement.seqMovements[0].origin.col;
+    listOfMovements[2] = computerMovement.seqMovements[computerMovement.numberOfMovements - 1].destiny.row;
+    listOfMovements[3] = computerMovement.seqMovements[computerMovement.numberOfMovements - 1].destiny.col;
+}
+
 int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn)
 {
 
@@ -1562,13 +1572,14 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     turn = *frontEndTurn;
 
+    Board testBoard;        //testBoard that the function generateComputerMovement can freely edit
+    enum Winner winner;
+    float biggestScoreAcc = 0;
+
     // parse data structures
 
     Board board = parseBoardFromMatrix(matrixBoard);
-    Board testBoard;        //testBoard that the function generateComputerMovement can freely edit
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
-    enum Winner winner;
-    float biggestScoreAcc = 0;
 
     checkMovementSequence(&board, &movementSequence, turn, 0);
 
@@ -1584,16 +1595,13 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, 2, &biggestScoreAcc, movementSequence);
+        generateComputerMovement(&testBoard, &movementSequence, 1, 4, &biggestScoreAcc, movementSequence);
         globalScore = 0;
 
         printf("\nDebug: computerMovement: ");
         printMovementSequence(&computerMovement);
-        listOfMovements[0] = computerMovement.seqMovements[0].origin.row;
-        listOfMovements[1] = computerMovement.seqMovements[0].origin.col;
-        listOfMovements[2] = computerMovement.seqMovements[0].destiny.row;
-        listOfMovements[3] = computerMovement.seqMovements[0].destiny.col;
         makeComputerMovement(&board, &computerMovement, turn);
+        writeComputerMovementOnFrontEnd(&listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
         winner = checkWinCondition(&board, turn);
         if (winner != NoOne) // check if someone won the game. If no one won, return the move authorization
@@ -1614,13 +1622,10 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, 2, &biggestScoreAcc, movementSequence);
+        generateComputerMovement(&testBoard, &movementSequence, 1, 4, &biggestScoreAcc, movementSequence);
         globalScore = 0;
-        listOfMovements[0] = computerMovement.seqMovements[0].origin.row;
-        listOfMovements[1] = computerMovement.seqMovements[0].origin.col;
-        listOfMovements[2] = computerMovement.seqMovements[0].destiny.row;
-        listOfMovements[3] = computerMovement.seqMovements[0].destiny.col;
         makeComputerMovement(&board, &computerMovement, turn);
+        writeComputerMovementOnFrontEnd(&listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
         winner = checkWinCondition(&board, turn);
         if (winner != NoOne) // check if someone won the game. If no one won, return the move authorization
