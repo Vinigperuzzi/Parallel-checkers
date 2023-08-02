@@ -6,6 +6,7 @@
 
 //////////////// -- DEFINE's -- ////////////////
 
+#define LEVEL_DEPTH 4
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -14,7 +15,7 @@
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
 #define MAX_FIRST_CHAIN_MOVE 13
-#define WEIGHT_DIFF_PIECES 0.5
+#define WEIGHT_DIFF_PIECES 0.9
 #define WEIGHT_QTD_KINGS 0.25
 #define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
 #define WEIGHT_POSSIBLE_KINGS 0.5  // pieces two squares from promotion
@@ -1407,8 +1408,11 @@ void getPossibleMovementsFromPosition(
     // can be made. So it calls the getPossibleAttackChainsFromPosition passing a pointer to possibleMovements,
     // so the function can populate it with the possible and valid attacks that can be made
 
+    #pragma omp parallel for private(auxSquare, auxMovementSeq) shared(board)
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
+        Board tempBoard;
+        memcpy(&tempBoard, board, sizeof(Board));
         auxSquare = board->square[i];
         if (auxSquare.state == Free && isDiagonal(*testPosition, auxSquare.position))
         {
@@ -1418,8 +1422,11 @@ void getPossibleMovementsFromPosition(
             checkMovementSequence(board, &auxMovementSeq, turn, 1);
             if (auxMovementSeq.movementType == Move)
             {
-                possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = auxMovementSeq;
-                possibleMovements->numberOfPossibleMovements++;
+                #pragma omp critical
+                {
+                    possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = auxMovementSeq;
+                    possibleMovements->numberOfPossibleMovements++;
+                }
             }
             else if (auxMovementSeq.movementType == Attack)
             {
@@ -1427,16 +1434,16 @@ void getPossibleMovementsFromPosition(
                 auxMovementSeq.numberOfMovements = 0;
                 IdStack idStack;
                 initializeIdStack(&idStack);
-                getPossibleAttackChainsFromPosition(board, testPosition,
-                                                    &board->square[getIndexOfPosition(*testPosition)].piece,
+                getPossibleAttackChainsFromPosition(&tempBoard, testPosition,
+                                                    &tempBoard.square[getIndexOfPosition(*testPosition)].piece,
                                                     turn, &idStack, auxMovementSeq, possibleMovements);
                 printf("\nDebug: Possiveis ataques (validos): ");
                 printPossibleMovements(possibleMovements);
-                return;
+                //return;
             }
         }
     }
-    return;
+    //return;
 }
 
 void generateComputerMovement
@@ -1500,6 +1507,9 @@ void generateComputerMovement
 
         printf("\nDebug: Saiu do primeiro for!");
 
+        Board localBoard;
+        memcpy(&localBoard, board, sizeof(Board));
+        #pragma omp parallel for
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
             printf("\nDebug: Entrou no segundo for do i!");
@@ -1595,7 +1605,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, 4, &biggestScoreAcc, movementSequence);
+        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &biggestScoreAcc, movementSequence);
         globalScore = 0;
 
         printf("\nDebug: computerMovement: ");
@@ -1622,7 +1632,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, 4, &biggestScoreAcc, movementSequence);
+        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &biggestScoreAcc, movementSequence);
         globalScore = 0;
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(&listOfMovements);
