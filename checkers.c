@@ -835,8 +835,6 @@ void getPossibleAttackChainsFromPosition
     // Given a certain position and a piece to test, this function adds to the possibleMovementsList every
     // possible and valid attack chain beggining in that position
 
-    printf("\nDebug: Chamou possibleAttack. Origin: %d %d", originPosition->row, originPosition->col);
-
     Movement testMovement;
     enum MovementType testMoveType;
     Square testSquare;
@@ -869,13 +867,10 @@ void getPossibleAttackChainsFromPosition
 
             if (testMoveType == Attack)
             {
-                printf("\nDebug: Encontrou um attack na checkAttackChain");
-                printMovement(&testMovement);
                 PathInfo testPathInfo = getPathInfo(board, testMovement.origin, testMovement.destiny);
                 if (!hasId(idStack, testPathInfo.lastPieceInTheWay.id))
                 {
                     pushIdStack(idStack, testPathInfo.lastPieceInTheWay.id);
-                    printf("\nDebug: Id da peça comida: %d", testPathInfo.lastPieceInTheWay.id);
                     possibleAttackChain.seqMovements[possibleAttackChain.numberOfMovements] = testMovement;
                     possibleAttackChain.numberOfMovements++;
                     getPossibleAttackChainsFromPosition(board, &testMovement.destiny, pieceTested, turn,
@@ -896,18 +891,16 @@ void getPossibleAttackChainsFromPosition
 
     if (possibleAttackChain.numberOfMovements > 0)
     {
-        printf("\nDebug: Chegou no final da Attack Chain");
         checkMovementSequence(board, &possibleAttackChain, turn, 0);
         if (possibleAttackChain.movementType == Attack)
         {
-            printf("\nDebug: E é um ataque valido!");
             possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = possibleAttackChain;
             possibleMovements->numberOfPossibleMovements++;
         }
     }
     if (possibleAttackChain.numberOfMovements > 0)
     {                        // if it achieved to identify one possible capture, the function removes
-        printf("\nDebug: Ta poppando da stack normal");popIdStack(idStack); // the possible caputured piece id from the idStack before returning
+        popIdStack(idStack); // the possible caputured piece id from the idStack before returning
     }
 
     return;
@@ -1005,7 +998,6 @@ void checkMovementSequence
         for (size_t i = 1; i < movementSequence->numberOfMovements; i++)
         {
             movementType = checkMovement(board, &movementSequence->seqMovements[i], &pieceMoving, turn, 1);
-            printf("\nMoveType: %d", movementType);
             if (movementType != Attack)
             {
                 movementSequence->movementType = Invalid;
@@ -1331,12 +1323,15 @@ int checkCentralPieces(Board board, enum PieceColor pieceColor)
 
 int evaluatePos(Board *board, enum PieceColor turn)
 {
+    enum Winner winner = checkWinCondition(board, turn);
 
-    // Ideia: Adicionar valorização de capturar uma dama
-
-    if (checkWinCondition(board, turn) == turn + 3)
+    if (winner == turn + 3)
     {
-        return 10;
+        return STRONGEST_VALUE;
+    }
+    else if(winner != NoOne)
+    {
+        return -1000;
     }
 
     int scoreQtdpieces, scoreKings, scoreQtdAdversarypieces, scoreAdvsersaryKings,
@@ -1362,7 +1357,6 @@ int evaluatePos(Board *board, enum PieceColor turn)
     }
 
     int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * STRONG_VALUE;
-    printf("\nPeso teste: %d", scoreQtdCaptures);
 
     int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
     int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings + 
@@ -1447,20 +1441,16 @@ void getPossibleMovementsFromPosition(
             }
             else if (auxMovementSeq.movementType == Attack)
             {
-                printf("\nDebug: if movement == Attack");
                 auxMovementSeq.numberOfMovements = 0;
                 IdStack idStack;
                 initializeIdStack(&idStack);
                 getPossibleAttackChainsFromPosition(&tempBoard, testPosition,
                                                     &tempBoard.square[getIndexOfPosition(*testPosition)].piece,
                                                     turn, &idStack, auxMovementSeq, possibleMovements);
-                printf("\nDebug: Possiveis ataques (validos): ");
-                printPossibleMovements(possibleMovements);
-                //return;
+                //printPossibleMovements(possibleMovements);
             }
         }
     }
-    //return;
 }
 
 void generateComputerMovement
@@ -1469,23 +1459,19 @@ void generateComputerMovement
     MovementSequence *movementSequence,
     int level,
     int depth,
-    int *biggestScoreAcc,
+    int localScoreSum,
     MovementSequence firstMovement
 )
 {
 
-    printf("\nDebug: entrou na funcao");
 
-    int localScoreSum = *biggestScoreAcc;
     int localScore;
     enum PieceColor thisLevelTurn = level % 2;
 
-    printf("\nSetou as variaveis.\nlocalScoreSum = %f\nthisLevelTurn = %d\nlevel = %d", localScoreSum, thisLevelTurn, level);
+    //printf("\nDEBUG:\nlocalScoreSum = %d\nthisLevelTurn = %d\nlevel = %d\n", localScoreSum, thisLevelTurn, level);
 
     if (level > 1)
     {
-        printf("\nDebug: entrou no if level > 1");
-
         Board tempBoard = *board;   //testBoard that the functions movePiece and makeAttack can freely edit
 
         switch (movementSequence->movementType)
@@ -1502,10 +1488,8 @@ void generateComputerMovement
 
         localScore = evaluatePos(board, thisLevelTurn);
         localScoreSum += localScore;
-        printf("\nDebug: LocalScoreSum: %d", localScoreSum);
+       // printf("\nLocalScore: %d\nLocalScoreSum (actualizado): %d\n", localScore, localScoreSum);
     }
-
-    printf("\nDebug: seguiu o baile");
 
     PossibleMovements possibleMovements[PIECES_PER_PLAYER];
     Square auxSquare;
@@ -1524,29 +1508,23 @@ void generateComputerMovement
             }
         }
 
-        printf("\nDebug: Saiu do primeiro for!");
-
         Board localBoard;
         memcpy(&localBoard, board, sizeof(Board));
         #pragma omp parallel for
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
-            printf("\nDebug: Entrou no segundo for do i!");
             for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
             {
-                printf("\nDebug: Entrou no segundo for do j!");
                 if (level == 1)
                 {
-                    firstMovement = possibleMovements[i].possibleMovementList[j];
+                    #pragma omp critical
+                    {
+                        firstMovement = possibleMovements[i].possibleMovementList[j];
+                    }
                 }
-                //DEBUG
 
-                printPossibleMovements(&possibleMovements[i]);
-
-                //DEBUG
                 generateComputerMovement(board, &possibleMovements[i].possibleMovementList[j], level + 1,
-                                         depth, biggestScoreAcc, firstMovement);
-                printf("\nDebug: Saiu da chamada recursica de generateComputer...");
+                                         depth, localScoreSum, firstMovement);
             }
         }
     }
@@ -1559,11 +1537,8 @@ void generateComputerMovement
                 globalScore = localScoreSum;
                 computerMovement = firstMovement;
             }
-            printf("\nDebug: Chegou no if do final da funcao! Computer movement: %d %d - %d %d", computerMovement.seqMovements[0].origin.row, computerMovement.seqMovements[0].origin.col, computerMovement.seqMovements[0].destiny.row, computerMovement.seqMovements[0].destiny.col);
-        }
-        else
-        {
-            printf("\nDebug: Chegou no if do final da funcao mas nao superou o localScore");
+            printf("\nDEBUG:\nlocalScore: %d\nlocalScoreSum = %d\nthisLevelTurn = %d\nlevel = %d", localScore, localScoreSum, thisLevelTurn, level);
+            printf("\nComputer movement: %d %d - %d %d\n", computerMovement.seqMovements[0].origin.row, computerMovement.seqMovements[0].origin.col, computerMovement.seqMovements[0].destiny.row, computerMovement.seqMovements[0].destiny.col);
         }
     }
 }
@@ -1609,7 +1584,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     Board testBoard;        //testBoard that the function generateComputerMovement can freely edit
     enum Winner winner;
-    int biggestScoreAcc = 0;
+    int scoreSum = 0;
 
     // parse data structures
 
@@ -1630,11 +1605,9 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &biggestScoreAcc, movementSequence);
-        globalScore = 0;
+        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, scoreSum, movementSequence);
+        globalScore = INT_MIN;
 
-        printf("\nDebug: computerMovement: ");
-        printMovementSequence(&computerMovement);
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
@@ -1657,8 +1630,8 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &biggestScoreAcc, movementSequence);
-        globalScore = 0;
+        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, scoreSum, movementSequence);
+        globalScore = INT_MIN;
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
@@ -1720,7 +1693,6 @@ void testFunction1()
         if(possibleMovements[i].numberOfPossibleMovements != 0)
         {
             printf("\npossibleMovements peca %d", i+1);
-            printPossibleMovements(&possibleMovements[i]);
         }
         else
         {
