@@ -7,7 +7,7 @@
 
 //////////////// -- DEFINE's -- ////////////////
 
-#define LEVEL_DEPTH 6
+#define LEVEL_DEPTH 5
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -1339,24 +1339,24 @@ int evaluatePos(Board *board, enum PieceColor turn)
 
     if (!turn)
     {
-        scoreQtdpieces = board->whitePieces * MEDIUM_VALUE;
-        scoreKings = board->whiteKings * MEDIUM_VALUE;
-        scoreQtdAdversarypieces = board->blackPieces * MEDIUM_VALUE;
-        scoreAdvsersaryKings = board->blackKings * MEDIUM_VALUE;
+        scoreQtdpieces = board->whitePieces * MEDIUM_WEAK_VALUE;
+        scoreKings = board->whiteKings * STRONG_VALUE;
+        scoreQtdAdversarypieces = board->blackPieces * MEDIUM_WEAK_VALUE;
+        scoreAdvsersaryKings = board->blackKings * STRONG_VALUE;
         scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6) * MEDIUM_WEAK_VALUE;
         scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5) * MEDIUM_WEAK_VALUE;
     }
     else
     {
-        scoreQtdpieces = board->blackKings * MEDIUM_VALUE;
-        scoreKings = board->blackKings * MEDIUM_VALUE;
-        scoreQtdAdversarypieces = board->whitePieces * MEDIUM_VALUE;
-        scoreAdvsersaryKings = board->whiteKings * MEDIUM_VALUE;
+        scoreQtdpieces = board->blackPieces * MEDIUM_WEAK_VALUE;
+        scoreKings = board->blackKings * STRONG_VALUE;
+        scoreQtdAdversarypieces = board->whitePieces * MEDIUM_WEAK_VALUE;
+        scoreAdvsersaryKings = board->whiteKings * STRONG_VALUE;
         scoreEminentKings = checkQtdPiecesInRank(*board, turn, 1) * MEDIUM_WEAK_VALUE;
         scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
     }
 
-    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * STRONG_VALUE;
+    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * 0;
 
     int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
     int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings + 
@@ -1424,13 +1424,13 @@ void getPossibleMovementsFromPosition(
     {
         Board tempBoard;
         memcpy(&tempBoard, board, sizeof(Board));
-        auxSquare = board->square[i];
+        auxSquare = tempBoard.square[i];
         if (auxSquare.state == Free && isDiagonal(*testPosition, auxSquare.position))
         {
             auxMovement.destiny = auxSquare.position;
             auxMovementSeq.numberOfMovements = 1;
             auxMovementSeq.seqMovements[0] = auxMovement;
-            checkMovementSequence(board, &auxMovementSeq, turn, 1);
+            checkMovementSequence(&tempBoard, &auxMovementSeq, turn, 1);
             if (auxMovementSeq.movementType == Move)
             {
                 #pragma omp critical
@@ -1469,10 +1469,10 @@ void generateComputerMovement
     enum PieceColor thisLevelTurn = level % 2;
 
     //printf("\nDEBUG:\nlocalScoreSum = %d\nthisLevelTurn = %d\nlevel = %d\n", localScoreSum, thisLevelTurn, level);
+    Board tempBoard = *board;   //testBoard that the functions movePiece and makeAttack can freely edit
 
     if (level > 1)
     {
-        Board tempBoard = *board;   //testBoard that the functions movePiece and makeAttack can freely edit
 
         switch (movementSequence->movementType)
         {
@@ -1490,6 +1490,11 @@ void generateComputerMovement
         localScoreSum += localScore;
        // printf("\nLocalScore: %d\nLocalScoreSum (actualizado): %d\n", localScore, localScoreSum);
     }
+    else if (depth % 2 == 0)
+    {
+        localScore = evaluatePos(board, thisLevelTurn);
+        localScoreSum += localScore;
+    }
 
     PossibleMovements possibleMovements[PIECES_PER_PLAYER];
     Square auxSquare;
@@ -1499,17 +1504,15 @@ void generateComputerMovement
     {
         for (size_t i = 0; i < TOTAL_SQUARES; ++i)
         {
-            auxSquare = board->square[i];
+            auxSquare = tempBoard.square[i];
             if (auxSquare.state == Occupied && auxSquare.piece.color == thisLevelTurn)
             {
-                getPossibleMovementsFromPosition(board, &possibleMovements[possibleMovesIndexCounter],
+                getPossibleMovementsFromPosition(&tempBoard, &possibleMovements[possibleMovesIndexCounter],
                                                  &auxSquare.position, thisLevelTurn);
                 possibleMovesIndexCounter++;
             }
         }
 
-        Board localBoard;
-        memcpy(&localBoard, board, sizeof(Board));
         #pragma omp parallel for
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
@@ -1523,7 +1526,7 @@ void generateComputerMovement
                     }
                 }
 
-                generateComputerMovement(board, &possibleMovements[i].possibleMovementList[j], level + 1,
+                generateComputerMovement(&tempBoard, &possibleMovements[i].possibleMovementList[j], level + 1,
                                          depth, localScoreSum, firstMovement);
             }
         }
