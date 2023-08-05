@@ -15,7 +15,7 @@
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
-#define MAX_FIRST_CHAIN_MOVE 13
+#define MAX_FIRST_CHAIN_MOVE 18
 #define WEIGHT_DIFF_PIECES 0.9
 #define WEIGHT_QTD_KINGS 0.25
 #define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
@@ -278,7 +278,7 @@ int parseCharToInt(char character, int option)
 
 void printBoard(Board *board, int option)
 { //(1 to print index, 2 to print square names, 3 to print index)
-    system("clear || cls");
+    //system("clear || cls");
     for (int i = SQUARES_PER_ROW - 1; i >= 0; i--)
     {
         printf("\t\t\t%d ", i);
@@ -1327,10 +1327,12 @@ int evaluatePos(Board *board, enum PieceColor turn)
 
     if (winner == turn + 3)
     {
+        printf("\nDebug: entrou no if winner == turn + 3");
         return STRONGEST_VALUE;
     }
     else if(winner != NoOne)
     {
+        printf("\nDebug: entrou no if winner != NoOne");
         return -1000;
     }
 
@@ -1356,7 +1358,7 @@ int evaluatePos(Board *board, enum PieceColor turn)
         scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
     }
 
-    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * 0;
+    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * STRONG_VALUE;
 
     int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
     int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings + 
@@ -1464,35 +1466,33 @@ void generateComputerMovement
 )
 {
 
-
     int localScore;
     enum PieceColor thisLevelTurn = level % 2;
 
     //printf("\nDEBUG:\nlocalScoreSum = %d\nthisLevelTurn = %d\nlevel = %d\n", localScoreSum, thisLevelTurn, level);
-    Board tempBoard = *board;   //testBoard that the functions movePiece and makeAttack can freely edit
+    Board localBoard = *board;   //testBoard that the functions movePiece and makeAttack can freely edit
 
     if (level > 1)
     {
-
         switch (movementSequence->movementType)
         {
         case Move:
-            movePiece(&tempBoard, movementSequence->seqMovements[0]);
+            movePiece(&localBoard, movementSequence->seqMovements[0]);
             break;
         case Attack:
-            makeAttack(&tempBoard, movementSequence);
+            makeAttack(&localBoard, movementSequence);
             break;
         default:
             break;
         }
 
-        localScore = evaluatePos(board, thisLevelTurn);
+        localScore = evaluatePos(&localBoard, thisLevelTurn);
         localScoreSum += localScore;
-       // printf("\nLocalScore: %d\nLocalScoreSum (actualizado): %d\n", localScore, localScoreSum);
+        printf("\nDebug: Entrou no if (level>1)\nLocalScore: %d\nLocalScoreSum (actualizado): %d\n\n", localScore, localScoreSum);
     }
     else if (depth % 2 == 0)
     {
-        localScore = evaluatePos(board, thisLevelTurn);
+        localScore = evaluatePos(&localBoard, thisLevelTurn);
         localScoreSum += localScore;
     }
 
@@ -1504,10 +1504,10 @@ void generateComputerMovement
     {
         for (size_t i = 0; i < TOTAL_SQUARES; ++i)
         {
-            auxSquare = tempBoard.square[i];
+            auxSquare = localBoard.square[i];
             if (auxSquare.state == Occupied && auxSquare.piece.color == thisLevelTurn)
             {
-                getPossibleMovementsFromPosition(&tempBoard, &possibleMovements[possibleMovesIndexCounter],
+                getPossibleMovementsFromPosition(&localBoard, &possibleMovements[possibleMovesIndexCounter],
                                                  &auxSquare.position, thisLevelTurn);
                 possibleMovesIndexCounter++;
             }
@@ -1526,15 +1526,18 @@ void generateComputerMovement
                     }
                 }
 
-                generateComputerMovement(&tempBoard, &possibleMovements[i].possibleMovementList[j], level + 1,
+                generateComputerMovement(&localBoard, &possibleMovements[i].possibleMovementList[j], level + 1,
                                          depth, localScoreSum, firstMovement);
             }
         }
     }
-    else
+    
+    if(level == depth || globalScore == INT_MIN)
     {   
+        printf("Debug: entrou no else do if(level < depth). Verificando se deu localScoreSum > globalScore: %d\n", globalScore);
         if (localScoreSum > globalScore)
         {
+            printf(" DEU!");
             #pragma omp critical
             {
                 globalScore = localScoreSum;
@@ -1542,6 +1545,10 @@ void generateComputerMovement
             }
             printf("\nDEBUG:\nlocalScore: %d\nlocalScoreSum = %d\nthisLevelTurn = %d\nlevel = %d", localScore, localScoreSum, thisLevelTurn, level);
             printf("\nComputer movement: %d %d - %d %d\n", computerMovement.seqMovements[0].origin.row, computerMovement.seqMovements[0].origin.col, computerMovement.seqMovements[0].destiny.row, computerMovement.seqMovements[0].destiny.col);
+        }
+        else
+        {
+            printf(" NUM DEU!");
         }
     }
 }
@@ -1661,48 +1668,30 @@ void testFunction1()
 {
     int matrix[8][8] =
     {
-        {1, 0, 1, 0, 1, 0, 1, 0},
-        {0, 1, 0, 1, 0, 1, 0, 1},
-        {1, 0, 1, 0, 1, 0, 1, 0},
-        {0, 0, 0, 0, 0, 2, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 2, 0, 2, 0, 2, 0, 2},
-        {2, 0, 2, 0, 0, 0, 2, 0},
-        {0, 2, 0, 2, 0, 2, 0, 2}
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 0},
+        {0, 0, 0, 0, 2, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0}
     };
 
     Board board = parseBoardFromMatrix(matrix);
     printBoard(&board, 0);
-
-    PossibleMovements possibleMovements[PIECES_PER_PLAYER];
-    Square auxSquare;
-    int possibleMovesIndexCounter = 0;
-    enum PieceColor thisLevelTurn = White;
-    turn = White;
-
-    for (size_t i = 0; i < TOTAL_SQUARES; ++i)
+    MovementSequence moveSeq;
+    turn = 1;
+    Board testBoard = board;
+    int scoreSum = 0;
+    generateComputerMovement(&testBoard, &moveSeq, 1, LEVEL_DEPTH, scoreSum, moveSeq);
+    globalScore = INT_MIN;
+    makeComputerMovement(&board, &computerMovement, turn);
+    printBoard(&board, 0);
+    if(checkWinCondition(&board, 1))
     {
-        auxSquare = board.square[i];
-        if (auxSquare.state == Occupied && auxSquare.piece.color == thisLevelTurn)
-        {
-            getPossibleMovementsFromPosition(&board, &possibleMovements[possibleMovesIndexCounter],
-                                                &auxSquare.position, thisLevelTurn);
-            possibleMovesIndexCounter++;
-        }
+        printf("\n\nBlack ganhou");
     }
-
-    for (int i = 0; i < possibleMovesIndexCounter; i++)
-    {
-        if(possibleMovements[i].numberOfPossibleMovements != 0)
-        {
-            printf("\npossibleMovements peca %d", i+1);
-        }
-        else
-        {
-            printf("\nNenhum possibleMovement para a peca %d", i+1);
-        }
-    }
-    printf("\n");
 }
 
 int main(void)
