@@ -7,7 +7,7 @@
 
 //////////////// -- DEFINE's -- ////////////////
 
-#define LEVEL_DEPTH 2
+#define LEVEL_DEPTH 8
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -1427,7 +1427,7 @@ void getPossibleMovementsFromPosition(
     // can be made. So it calls the getPossibleAttackChainsFromPosition passing a pointer to possibleMovements,
     // so the function can populate it with the possible and valid attacks that can be made
 
-    //#pragma omp parallel for private(auxSquare, auxMovementSeq) shared(board)
+    #pragma omp parallel for private(auxSquare, auxMovementSeq) shared(board)
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
         Board localBoard;
@@ -1519,7 +1519,7 @@ void generateComputerMovement
 
         //Board localBoard;
         //memcpy(&localBoard, board, sizeof(Board));
-       // #pragma omp parallel for
+        #pragma omp parallel for
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
             for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
@@ -1529,37 +1529,36 @@ void generateComputerMovement
             }
         }
     }
-    else
-    {   
-        thisNodeScore = evaluatePos(&localBoard, turn);
-        if (thisNodeType == Maximum)
+
+    thisNodeScore = evaluatePos(&localBoard, turn); 
+
+    if (thisNodeType == Maximum)
+    {
+        if(thisNodeScore <= *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
+                                                *if father level is a minimum, so it will search, in its children, for a move that minimize the state.
+                                                *In this line, if this node is maximum, so the fathers have to be a minimum.
+                                                */
         {
-            if(thisNodeScore <= *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
-                                                    *if father level is a minimum, so it will search, in its children, for a move that minimize the state.
-                                                    *In this line, if this node is maximum, so the fathers have to be a minimum.
-                                                    */
+            #pragma omp critical
             {
-                //#pragma omp critical
+                *parentNodeScore = thisNodeScore;
+                if (level == 2)
                 {
-                    *parentNodeScore = thisNodeScore;
-                    if (level == 2)
-                    {
-                        computerMovement = *movementSequence;
-                    }
+                    computerMovement = *movementSequence;
                 }
             }
         }
-        else
+    }
+    else
+    {
+        if (thisNodeScore >= *parentNodeScore)
         {
-            if (thisNodeScore >= *parentNodeScore)
+            #pragma opm critical
             {
-               // #pragma opm critical
+                *parentNodeScore = thisNodeScore;
+                if (level == 2)
                 {
-                    *parentNodeScore = thisNodeScore;
-                    if (level == 2)
-                    {
-                        computerMovement = *movementSequence;
-                    }
+                    computerMovement = *movementSequence;
                 }
             }
         }
@@ -1628,7 +1627,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, firstNodeScore);
+        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
         globalScore = INT_MIN;
 
         makeComputerMovement(&board, &computerMovement, turn);
@@ -1653,7 +1652,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, firstNodeScore);
+        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
         globalScore = INT_MIN;
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(listOfMovements);
