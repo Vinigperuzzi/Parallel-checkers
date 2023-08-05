@@ -1329,54 +1329,47 @@ int checkCentralPieces(Board board, enum PieceColor pieceColor)
 
 int evaluatePos(Board *board, enum PieceColor turn)
 {
-    if(turn == 0)
+    enum Winner winner = checkWinCondition(board, turn);
+
+    if (winner == turn + 3)
     {
-        return 10;
+        printf("\nDebug: entrou no if winner == turn + 3");
+        return STRONGEST_VALUE;
+    }
+    else if(winner != NoOne)
+    {
+        printf("\nDebug: entrou no if winner != NoOne");
+        return -1000;
+    }
+
+    int scoreQtdpieces, scoreKings, scoreQtdAdversarypieces, scoreAdvsersaryKings,
+        scoreEminentKings, scorePossibleKings;
+
+    if (!turn)
+    {
+        scoreQtdpieces = board->whitePieces * MEDIUM_WEAK_VALUE;
+        scoreKings = board->whiteKings * STRONG_VALUE;
+        scoreQtdAdversarypieces = board->blackPieces * MEDIUM_WEAK_VALUE;
+        scoreAdvsersaryKings = board->blackKings * STRONG_VALUE;
+        scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6) * MEDIUM_WEAK_VALUE;
+        scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5) * MEDIUM_WEAK_VALUE;
     }
     else
     {
-        return 20;
+        scoreQtdpieces = board->blackPieces * MEDIUM_WEAK_VALUE;
+        scoreKings = board->blackKings * STRONG_VALUE;
+        scoreQtdAdversarypieces = board->whitePieces * MEDIUM_WEAK_VALUE;
+        scoreAdvsersaryKings = board->whiteKings * STRONG_VALUE;
+        scoreEminentKings = checkQtdPiecesInRank(*board, turn, 1) * MEDIUM_WEAK_VALUE;
+        scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
     }
 
-    // enum Winner winner = checkWinCondition(board, turn);
+    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * STRONG_VALUE;
 
-    // if (winner == turn + 3)
-    // {
-    //     return STRONGEST_VALUE;
-    // }
-    // else if(winner != NoOne)
-    // {
-    //     return -1000;
-    // }
-
-    // int scoreQtdpieces, scoreKings, scoreQtdAdversarypieces, scoreAdvsersaryKings,
-    //     scoreEminentKings, scorePossibleKings;
-
-    // if (!turn)
-    // {
-    //     scoreQtdpieces = board->whitePieces * WEAK_VALUE;
-    //     scoreKings = board->whiteKings * MEDIUM_VALUE;
-    //     scoreQtdAdversarypieces = board->blackPieces * WEAK_VALUE;
-    //     scoreAdvsersaryKings = board->blackKings * MEDIUM_VALUE;
-    //     scoreEminentKings = checkQtdPiecesInRank(*board, turn, 6) * MEDIUM_WEAK_VALUE;
-    //     scorePossibleKings = checkQtdPiecesInRank(*board, turn, 5) * MEDIUM_WEAK_VALUE;
-    // }
-    // else
-    // {
-    //     scoreQtdpieces = board->blackKings * WEAK_VALUE;
-    //     scoreKings = board->blackKings * MEDIUM_VALUE;
-    //     scoreQtdAdversarypieces = board->whitePieces * WEAK_VALUE;
-    //     scoreAdvsersaryKings = board->whiteKings * MEDIUM_VALUE;
-    //     scoreEminentKings = checkQtdPiecesInRank(*board, turn, 1) * MEDIUM_WEAK_VALUE;
-    //     scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
-    // }
-
-    // int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * STRONG_VALUE;
-
-    // int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
-    // int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings + 
-    //                     scoreEminentKings + scorePossibleKings - scoreQtdCaptures + scoreCentralPieces;
-    // return pesoPosicao;
+    int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
+    int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings + 
+                        scoreEminentKings + scorePossibleKings - scoreQtdCaptures + scoreCentralPieces;
+    return pesoPosicao;
 }
 
 void printMovement(Movement *movement)
@@ -1437,18 +1430,18 @@ void getPossibleMovementsFromPosition(
     //#pragma omp parallel for private(auxSquare, auxMovementSeq) shared(board)
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
-        Board tempBoard;
-        memcpy(&tempBoard, board, sizeof(Board));
-        auxSquare = board->square[i];
+        Board localBoard;
+        memcpy(&localBoard, board, sizeof(Board));
+        auxSquare = localBoard.square[i];
         if (auxSquare.state == Free && isDiagonal(*testPosition, auxSquare.position))
         {
             auxMovement.destiny = auxSquare.position;
             auxMovementSeq.numberOfMovements = 1;
             auxMovementSeq.seqMovements[0] = auxMovement;
-            checkMovementSequence(&tempBoard, &auxMovementSeq, turn, 1);
+            checkMovementSequence(&localBoard, &auxMovementSeq, turn, 1);
             if (auxMovementSeq.movementType == Move)
             {
-                //#pragma omp critical
+                #pragma omp critical
                 {
                     possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = auxMovementSeq;
                     possibleMovements->numberOfPossibleMovements++;
@@ -1459,8 +1452,8 @@ void getPossibleMovementsFromPosition(
                 auxMovementSeq.numberOfMovements = 0;
                 IdStack idStack;
                 initializeIdStack(&idStack);
-                getPossibleAttackChainsFromPosition(&tempBoard, testPosition,
-                                                    &tempBoard.square[getIndexOfPosition(*testPosition)].piece,
+                getPossibleAttackChainsFromPosition(&localBoard, testPosition,
+                                                    &localBoard.square[getIndexOfPosition(*testPosition)].piece,
                                                     turn, &idStack, auxMovementSeq, possibleMovements);
                 //printPossibleMovements(possibleMovements);
             }
@@ -1480,7 +1473,7 @@ void generateComputerMovement
     enum NodeType thisNodeType = level % 2;
     enum PieceColor thisLevelTurn = level % 2;
     int thisNodeScore;
-    Board tempBoard;
+    Board localBoard = *board;
 
     if(thisNodeType == Maximum)
     {
@@ -1493,15 +1486,13 @@ void generateComputerMovement
 
     if (level > 1)
     {
-        tempBoard = *board;   //testBoard that the functions movePiece and makeAttack can freely edit
-
         switch (movementSequence->movementType)
         {
         case Move:
-            movePiece(&tempBoard, movementSequence->seqMovements[0]);
+            movePiece(&localBoard, movementSequence->seqMovements[0]);
             break;
         case Attack:
-            makeAttack(&tempBoard, movementSequence);
+            makeAttack(&localBoard, movementSequence);
             break;
         default:
             break;
@@ -1517,17 +1508,17 @@ void generateComputerMovement
     {
         for (size_t i = 0; i < TOTAL_SQUARES; ++i)
         {
-            auxSquare = tempBoard.square[i];
+            auxSquare = localBoard.square[i];
             if (auxSquare.state == Occupied && auxSquare.piece.color == thisLevelTurn)
             {
-                getPossibleMovementsFromPosition(&tempBoard, &possibleMovements[possibleMovesIndexCounter],
+                getPossibleMovementsFromPosition(&localBoard, &possibleMovements[possibleMovesIndexCounter],
                                                  &auxSquare.position, thisLevelTurn);
                 possibleMovesIndexCounter++;
             }
         }
 
-        Board localBoard;
-        memcpy(&localBoard, board, sizeof(Board));
+        //Board localBoard;
+        //memcpy(&localBoard, board, sizeof(Board));
        // #pragma omp parallel for
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
@@ -1540,7 +1531,7 @@ void generateComputerMovement
     }
     else
     {   
-        thisNodeScore = evaluatePos(board, turn);
+        thisNodeScore = evaluatePos(&localBoard, turn);
         if (thisNodeType == Maximum)
         {
             if(thisNodeScore <= *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
@@ -1565,6 +1556,10 @@ void generateComputerMovement
                // #pragma opm critical
                 {
                     *parentNodeScore = thisNodeScore;
+                    if (level == 2)
+                    {
+                        computerMovement = *movementSequence;
+                    }
                 }
             }
         }
@@ -1612,7 +1607,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     Board testBoard;        //testBoard that the function generateComputerMovement can freely edit
     enum Winner winner;
-    int firstNodeScore = INT_MAX;    //Lucky number 
+    int firstNodeScore = INT_MAX;
 
     // parse data structures
 
