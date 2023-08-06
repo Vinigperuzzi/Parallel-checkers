@@ -153,12 +153,15 @@ def submit_move():
 def print_coordinates(event):
     global qtd_moves, list_of_moves, which_movement
     widget = event.widget
+    if isinstance(widget, tk.Label) and (which_movement):
+        print_board()
+        which_movement = 0
+        list_of_moves.clear()
+        return
     if isinstance(widget, tk.Label):  # Verify if a piece has been clicked or a square
         col, row = widget.master.grid_info()["column"], str(7 - int(widget.master.grid_info()["row"]))
         print(f"Coordenadas da peça: {col}{row}")
         list_of_moves.append(row); list_of_moves.append(col)
-        if (which_movement):
-            list_of_moves.append(row); list_of_moves.append(col)
     else:
         col, row = widget.grid_info()["column"], str(7 - int((widget.grid_info()["row"])))
         print(f"Coordenadas da square: {col}{row}")
