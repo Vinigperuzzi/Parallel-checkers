@@ -4,6 +4,8 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 import ctypes
 import numpy as np
+import pygame
+import random
 
 # Creation of matrice 8x8 board position
 board_pos = [[0 for _ in range(8)] for _ in range(8)]
@@ -67,7 +69,30 @@ def start_game():
 
 def define_initial_pos():
     print("Definir Posição Inicial")
-    status_label.config(text="Funcionalidade a ser implementada, aguarde...", fg="yellow")  # Update the status label text
+    start_game()
+
+    firstMove = random.randint(1, 7)
+    if firstMove == 1:
+        board_pos[5][7-1] = 0
+        board_pos[4][7-0] = 2
+    if firstMove == 2:
+        board_pos[5][7-1] = 0
+        board_pos[4][7-2] = 2
+    if firstMove == 3:
+        board_pos[5][7-3] = 0
+        board_pos[4][7-2] = 2
+    if firstMove == 4:
+        board_pos[5][7-3] = 0
+        board_pos[4][7-4] = 2
+    if firstMove == 5:
+        board_pos[5][7-5] = 0
+        board_pos[4][7-4] = 2
+    if firstMove == 6:
+        board_pos[5][7-5] = 0
+        board_pos[4][7-6] = 2
+    if firstMove == 7:
+        board_pos[5][7-7] = 0
+        board_pos[4][7-6] = 2
     print_board()
 
 def format_moves_to_string(moves):
@@ -80,7 +105,7 @@ def set_end_board(winner):
     for i in range(8):
         for j in range(8):
             if (i == 3 or i == 4) and (j == 3 or j == 4):
-                if (winner == -2):
+                if (winner == -4):
                     board_pos[i][j] = 3
                 else:
                     board_pos[i][j] = 4
@@ -101,12 +126,24 @@ def submit_move():
     test = entry_point()
     if test[0] == -1:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
+        path_to_audio = os.path.join(path_project, "Invalid.mp3")
+        play_audio(path_to_audio)
     elif test[0] == -2:
+        path_to_audio = os.path.join(path_project, "Move.wav")
+        play_audio(path_to_audio)
+    elif test[0] == -3:
+        path_to_audio = os.path.join(path_project, "Attack.wav")
+        play_audio(path_to_audio)
+    elif test[0] == -4:
         set_end_board(test[0])
         status_label.config(text="Brancas ganharam", fg="blue")  # Update the status label text
-    elif test[0] == -3:
+        path_to_audio = os.path.join(path_project, "end.mp3")
+        play_audio(path_to_audio)
+    elif test[0] == -5:
         set_end_board(test[0])
         status_label.config(text="Negras ganharam", fg="blue")  # Update the status label text
+        path_to_audio = os.path.join(path_project, "end.mp3")
+        play_audio(path_to_audio)
     else:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
     print_board()
@@ -126,13 +163,11 @@ def print_coordinates(event):
         list_of_moves.append(row); list_of_moves.append(col)
         if (which_movement):
             list_of_moves.append(row); list_of_moves.append(col)
+    widget.configure(bg="#06594b")
     status_label.config(text="Faça sua jogada", fg="black")  # Update the status label text
     print(col, row)
     print(list_of_moves)
     which_movement += 1
-
-def turn_on_highlight():
-    global list_of_moves
 
 # Function that create the colored squares and set png for pieces
 pieces_size = 63
@@ -176,6 +211,11 @@ def print_board():
                 label_piece.image = piece
                 label_piece.pack(pady=0)
                 label_piece.bind("<Button-1>", print_coordinates)
+
+def play_audio(file_path):
+    pygame.mixer.init()
+    pygame.mixer.music.load(file_path)
+    pygame.mixer.music.play()
 
 def entry_point():
     global board_pos, board_pos_send ,list_of_moves, qtd_moves, front_end_turn
@@ -228,10 +268,14 @@ def entry_point():
         machine_move.append(moves_c[i])
     if test == 0:
         machine_move[0] = -1
-    elif test == 3:
+    elif test == 1:
         machine_move[0] = -2
-    elif test == 4:
+    elif test == 2:
         machine_move[0] = -3
+    elif test == 3:
+        machine_move[0] = -4
+    elif test == 4:
+        machine_move[0] = -5
 
     # Parse the matrix send to C back to list pf lists in python
     for i in range(8):
@@ -296,10 +340,10 @@ menu = ttk.LabelFrame(root, text="Menu de interação", width=200, height=400, b
 menu.grid(row=0, column=1, padx=(0, 10), pady=10)
 
 # Rounding buttons
-btn_iniciar = tk.Button(menu, text="Iniciar Jogo", bg=color_iniciar_button, fg="white", font=("Arial", 12, "bold"), command=start_game, relief=tk.RAISED, borderwidth=5)
+btn_iniciar = tk.Button(menu, text="Reiniciar Jogo", bg=color_iniciar_button, fg="white", font=("Arial", 12, "bold"), command=start_game, relief=tk.RAISED, borderwidth=5)
 btn_iniciar.pack(pady=10, padx=20, ipadx=10)
 
-btn_definir = tk.Button(menu, text="Definir Posição Inicial", bg=color_definir_button, fg="white", font=("Arial", 12, "bold"), command=define_initial_pos, relief=tk.RAISED, borderwidth=5)
+btn_definir = tk.Button(menu, text="Reiniciar (Máquina inicia jogando)", bg=color_definir_button, fg="white", font=("Arial", 12, "bold"), command=define_initial_pos, relief=tk.RAISED, borderwidth=5)
 btn_definir.pack(pady=10, padx=20, ipadx=10)
 
 btn_sair = tk.Button(menu, text="Sair do Programa", bg=color_sair_button, fg="white", font=("Arial", 12, "bold"), command=root.quit, relief=tk.RAISED, borderwidth=5)
