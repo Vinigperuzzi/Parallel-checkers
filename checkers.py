@@ -105,7 +105,7 @@ def set_end_board(winner):
     for i in range(8):
         for j in range(8):
             if (i == 3 or i == 4) and (j == 3 or j == 4):
-                if (winner == -4):
+                if (winner == 3):
                     board_pos[i][j] = 3
                 else:
                     board_pos[i][j] = 4
@@ -124,22 +124,24 @@ def submit_move():
     list_of_moves.pop(); list_of_moves.pop()    #Take back the duplication from list_of_moves for the last move in chain
     which_movement = 0
     test = entry_point()
-    if test[0] == -1:
+    if test[4] == 0:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
         path_to_audio = os.path.join(path_project, "Invalid.mp3")
         play_audio(path_to_audio)
-    elif test[0] == -2:
+    elif test[4] == 1:
+        status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
         path_to_audio = os.path.join(path_project, "Move.wav")
         play_audio(path_to_audio)
-    elif test[0] == -3:
+    elif test[4] == 2:
+        status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
         path_to_audio = os.path.join(path_project, "Attack.wav")
         play_audio(path_to_audio)
-    elif test[0] == -4:
+    elif test[4] == 3:
         set_end_board(test[0])
         status_label.config(text="Brancas ganharam", fg="blue")  # Update the status label text
         path_to_audio = os.path.join(path_project, "end.mp3")
         play_audio(path_to_audio)
-    elif test[0] == -5:
+    elif test[4] == 4:
         set_end_board(test[0])
         status_label.config(text="Negras ganharam", fg="blue")  # Update the status label text
         path_to_audio = os.path.join(path_project, "end.mp3")
@@ -266,16 +268,7 @@ def entry_point():
     machine_move = []
     for i in range(4):
         machine_move.append(moves_c[i])
-    if test == 0:
-        machine_move[0] = -1
-    elif test == 1:
-        machine_move[0] = -2
-    elif test == 2:
-        machine_move[0] = -3
-    elif test == 3:
-        machine_move[0] = -4
-    elif test == 4:
-        machine_move[0] = -5
+    machine_move.append(test)
 
     # Parse the matrix send to C back to list pf lists in python
     for i in range(8):
