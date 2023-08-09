@@ -7,7 +7,7 @@
 
 //////////////// -- DEFINE's -- ////////////////
 
-#define LEVEL_DEPTH 8
+#define LEVEL_DEPTH 2
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -15,7 +15,7 @@
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
-#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 30
+#define MAX_FIRST_CHAIN_MOVE 13
 #define WEIGHT_DIFF_PIECES 0.9
 #define WEIGHT_QTD_KINGS 0.25
 #define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
@@ -100,7 +100,7 @@ typedef struct STMovementSequence
 
 typedef struct STPossibleMovement
 {
-    MovementSequence possibleMovementList[MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE];
+    MovementSequence possibleMovementList[MAX_FIRST_CHAIN_MOVE];
     int numberOfPossibleMovements;
 } PossibleMovements;
 
@@ -1522,20 +1522,17 @@ void generateComputerMovement
         {
             for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
             {
-                generateComputerMovement(&localBoard, &possibleMovements[i].possibleMovementList[j], level + 1,
+                parallelGenerateComputerMovement(&localBoard, &possibleMovements[i].possibleMovementList[j], level + 1,
                                          depth, &thisNodeScore);
             }
         }
     }
-    else if(level == depth)
-    {
-        thisNodeScore = evaluatePos(&localBoard, turn); 
-    }
 
+    thisNodeScore = evaluatePos(&localBoard, turn); 
 
     if (thisNodeType == Maximum)
     {
-        if(thisNodeScore < *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
+        if(thisNodeScore <= *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
                                                 *if father level is a minimum, so it will search, in its children, for a move that minimize the state.
                                                 *In this line, if this node is maximum, so the fathers have to be a minimum.
                                                 */
@@ -1552,7 +1549,77 @@ void generateComputerMovement
     }
     else
     {
-        if (thisNodeScore > *parentNodeScore)
+        if (thisNodeScore >= *parentNodeScore)
+        {
+            #pragma opm critical
+            {
+                *parentNodeScore = thisNodeScore;
+                if (level == 2)
+                {
+                    computerMovement = *movementSequence;
+                }
+            }
+        }
+    }
+}
+
+void parallelGenerateComputerMovement
+(
+    Board *board,
+    enum PieceColor computerColor, 
+    int depth,
+)
+{   
+    int thisNodeScore = INT_MIN;
+    Board localBoard = *board;
+
+    PossibleMovements possibleMovements[PIECES_PER_PLAYER];
+    Square auxSquare;
+    int possibleMovesIndexCounter = 0;
+
+    for (size_t i = 0; i < TOTAL_SQUARES; ++i)
+    {
+        auxSquare = localBoard.square[i];
+        if (auxSquare.state == Occupied && auxSquare.piece.color == computerColor)
+        {
+            getPossibleMovementsFromPosition(&localBoard, &possibleMovements[possibleMovesIndexCounter],
+                                                &auxSquare.position, computerColor);
+            possibleMovesIndexCounter++;
+        }
+    }
+
+    #pragma omp parallel for
+    for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
+    {
+        for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
+        {
+            generateComputerMovement(&localBoard, &possibleMovements[i].possibleMovementList[j], 2,
+                                        depth, &thisNodeScore);
+        }
+    }
+
+    thisNodeScore = evaluatePos(&localBoard, turn); 
+
+    if (thisNodeType == Maximum)
+    {
+        if(thisNodeScore <= *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
+                                                *if father level is a minimum, so it will search, in its children, for a move that minimize the state.
+                                                *In this line, if this node is maximum, so the fathers have to be a minimum.
+                                                */
+        {
+            #pragma omp critical
+            {
+                *parentNodeScore = thisNodeScore;
+                if (level == 2)
+                {
+                    computerMovement = *movementSequence;
+                }
+            }
+        }
+    }
+    else
+    {
+        if (thisNodeScore >= *parentNodeScore)
         {
             #pragma opm critical
             {
@@ -1605,7 +1672,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     turn = *frontEndTurn;
 
-    Board testBoard;        //testBoard that the function generateComputerMovement can freely edit
+    Board testBoard;        //testBoard that the function parallelGenerateComputerMovement can freely edit
     enum Winner winner;
     int firstNodeScore = INT_MAX;
 
@@ -1628,7 +1695,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
+        parallelGenerateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
         globalScore = INT_MIN;
 
         makeComputerMovement(&board, &computerMovement, turn);
@@ -1653,7 +1720,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
+        parallelGenerateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
         globalScore = INT_MIN;
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(listOfMovements);
