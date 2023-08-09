@@ -7,7 +7,7 @@
 
 //////////////// -- DEFINE's -- ////////////////
 
-#define LEVEL_DEPTH 8
+#define LEVEL_DEPTH 5
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -1504,7 +1504,12 @@ void generateComputerMovement
     Square auxSquare;
     int possibleMovesIndexCounter = 0;
 
-    if (level < depth)
+    if(level == depth || checkWinCondition(board, thisLevelTurn) != NoOne)
+    {
+        printf("\nDebug: level: %d", level);
+        thisNodeScore = evaluatePos(&localBoard, turn); 
+    }
+    else if (level < depth)
     {
         for (size_t i = 0; i < TOTAL_SQUARES; ++i)
         {
@@ -1527,12 +1532,7 @@ void generateComputerMovement
             }
         }
     }
-    else if(level == depth)
-    {
-        thisNodeScore = evaluatePos(&localBoard, turn); 
-    }
-
-
+    
     if (thisNodeType == Maximum)
     {
         if(thisNodeScore < *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
@@ -1544,8 +1544,10 @@ void generateComputerMovement
             {
                 *parentNodeScore = thisNodeScore;
                 if (level == 2)
-                {
+                {   
+                    printf("\nDebug: Entrou no if level == 2");
                     computerMovement = *movementSequence;
+                    printMovementSequence(&computerMovement);
                 }
             }
         }
@@ -1559,7 +1561,9 @@ void generateComputerMovement
                 *parentNodeScore = thisNodeScore;
                 if (level == 2)
                 {
+                    printf("\nDebug: Entrou no if level == 2");
                     computerMovement = *movementSequence;
+                    printMovementSequence(&computerMovement);
                 }
             }
         }
