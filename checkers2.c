@@ -8,7 +8,6 @@
 
 //////////////// -- DEFINE's -- ////////////////
 
-//#define LEVEL_DEPTH 5
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -16,7 +15,7 @@
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
-#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 30
+#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 40
 #define WEIGHT_DIFF_PIECES 0.9
 #define WEIGHT_QTD_KINGS 0.25
 #define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
@@ -139,7 +138,7 @@ char blackSquare[9] = "\033[40m";
 enum PieceColor turn = White;
 int globalScore = INT_MIN;
 MovementSequence computerMovement;
-int LEVEL_DEPTH = 2;
+int Level_Depth;
 
 //////////////// -- STACK IMPL -- ////////////////
 
@@ -1341,12 +1340,10 @@ int evaluatePos(Board *board, enum PieceColor turn)
 
     if (winner == turn + 3)
     {
-        printf("\nDebug: entrou no if winner == turn + 3");
         return STRONGEST_VALUE;
     }
     else if (winner != NoOne)
     {
-        printf("\nDebug: entrou no if winner != NoOne");
         return -1000;
     }
 
@@ -1448,7 +1445,7 @@ void getPossibleMovementsFromPosition(
             checkMovementSequence(&localBoard, &auxMovementSeq, turn, 1);
             if (auxMovementSeq.movementType == Move)
             {
-#pragma omp critical
+                #pragma omp critical
                 {
                     possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = auxMovementSeq;
                     possibleMovements->numberOfPossibleMovements++;
@@ -1462,7 +1459,6 @@ void getPossibleMovementsFromPosition(
                 getPossibleAttackChainsFromPosition(&localBoard, testPosition,
                                                     &localBoard.square[getIndexOfPosition(*testPosition)].piece,
                                                     turn, &idStack, auxMovementSeq, possibleMovements);
-                // printPossibleMovements(possibleMovements);
             }
         }
     }
@@ -1473,7 +1469,9 @@ void generateComputerMovement(
     MovementSequence *movementSequence,
     int level,
     int depth,
-    int *parentNodeScore)
+    int *parentNodeScore,
+    enum PieceColor computerColor
+)
 {
     enum NodeType thisNodeType = level % 2;
     enum PieceColor thisLevelTurn = level % 2;
@@ -1510,7 +1508,7 @@ void generateComputerMovement(
 
     if (level == depth || checkWinCondition(&localBoard, thisLevelTurn) != NoOne)
     {
-        thisNodeScore = evaluatePos(&localBoard, turn);
+        thisNodeScore = evaluatePos(&localBoard, computerColor);
     }
     else if (level < depth)
     {
@@ -1525,13 +1523,13 @@ void generateComputerMovement(
             }
         }
 
-    #pragma omp parallel for
+        #pragma omp parallel for
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
             for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
             {
                 generateComputerMovement(&localBoard, &possibleMovements[i].possibleMovementList[j], level + 1,
-                                         depth, &thisNodeScore);
+                                         depth, &thisNodeScore, computerColor);
             }
         }
     }
@@ -1543,14 +1541,12 @@ void generateComputerMovement(
                                                *In this line, if this node is maximum, so the fathers have to be a minimum.
                                                */
         {
-#pragma omp critical
+            #pragma omp critical
             {
                 *parentNodeScore = thisNodeScore;
                 if (level == 2)
                 {
-                    printf("\nDebug: Entrou no if level == 2");
                     computerMovement = *movementSequence;
-                    printMovementSequence(&computerMovement);
                 }
             }
         }
@@ -1559,14 +1555,12 @@ void generateComputerMovement(
     {
         if (thisNodeScore > *parentNodeScore)
         {
-#pragma opm critical
+        #pragma omp critical
             {
                 *parentNodeScore = thisNodeScore;
                 if (level == 2)
                 {
-                    printf("\nDebug: Entrou no if level == 2");
                     computerMovement = *movementSequence;
-                    printMovementSequence(&computerMovement);
                 }
             }
         }
@@ -1600,7 +1594,7 @@ void writeComputerMovementOnFrontEnd(int listOfMovements[])
     listOfMovements[3] = computerMovement.seqMovements[computerMovement.numberOfMovements - 1].destiny.col;
 }
 
-int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn, int frontdifficulty)
+int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn, int frontEndDifficulty)
 {
 
     // Function to establish connection between front and back end. The front end calls this function passing
@@ -1609,10 +1603,8 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
     // used here, then evaluates the movement that is trying to be made and act upon its type
 
     turn = *frontEndTurn;
-    LEVEL_DEPTH = frontdifficulty;
-    printf("\n\n\n\t\t\tA dificuldade foi setada como: %d\n\n", LEVEL_DEPTH);
+    Level_Depth = frontEndDifficulty;
 
-    Board testBoard; // testBoard that the function generateComputerMovement can freely edit
     enum Winner winner;
     int firstNodeScore = INT_MAX;
 
@@ -1635,9 +1627,8 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
             return winner;
         }
         swapTurn(frontEndTurn);
-        testBoard = board;
         initTime = omp_get_wtime();
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
+        generateComputerMovement(&board, &movementSequence, 1, Level_Depth, &firstNodeScore, turn);
         finalTime = omp_get_wtime();
         printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         globalScore = INT_MIN;
@@ -1663,9 +1654,8 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
             return winner;
         }
         swapTurn(frontEndTurn);
-        testBoard = board;
         initTime = omp_get_wtime();
-        generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
+        generateComputerMovement(&board, &movementSequence, 1, Level_Depth, &firstNodeScore, turn);
         finalTime = omp_get_wtime();
         printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         globalScore = INT_MIN;

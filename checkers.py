@@ -125,9 +125,9 @@ def set_end_board(winner):
 
 def submit_move():
     global list_of_moves, qtd_moves, which_movement
-    print("Submeter Jogada")
-    print(list_of_moves)
-    print(board_pos)
+    #print("Submeter Jogada")
+    #print(list_of_moves)
+    #print(board_pos)
     if (not len(list_of_moves)):
         status_label.config(text="Você não chegou a fazer uma jogada!", fg="red")
         return
@@ -170,18 +170,18 @@ def print_coordinates(event):
         return
     if isinstance(widget, tk.Label):  # Verify if a piece has been clicked or a square
         col, row = widget.master.grid_info()["column"], str(7 - int(widget.master.grid_info()["row"]))
-        print(f"Coordenadas da peça: {col}{row}")
+        #print(f"Coordenadas da peça: {col}{row}")
         list_of_moves.append(row); list_of_moves.append(col)
     else:
         col, row = widget.grid_info()["column"], str(7 - int((widget.grid_info()["row"])))
-        print(f"Coordenadas da square: {col}{row}")
+        #print(f"Coordenadas da square: {col}{row}")
         list_of_moves.append(row); list_of_moves.append(col)
         if (which_movement):
             list_of_moves.append(row); list_of_moves.append(col)
     widget.configure(bg="#06594b")
     status_label.config(text="Faça sua jogada", fg="black")  # Update the status label text
-    print(col, row)
-    print(list_of_moves)
+    #print(col, row)
+    #print(list_of_moves)
     which_movement += 1
 
 # Function that create the colored squares and set png for pieces
@@ -238,7 +238,7 @@ def entry_point():
         for j in range(8):
             board_pos_send[i][7-j] = board_pos[i][j]
 
-    print("Board_pos_send:\n\n", board_pos_send)
+    #print("Board_pos_send:\n\n", board_pos_send)
 
     # Convert the matrice Python for NumPy array
     board_np = np.array(board_pos_send, dtype=np.int32)
@@ -265,8 +265,8 @@ def entry_point():
     moves_c = (ctypes.c_int * qtd_moves)(*map(int, list_of_moves))  #Consider change qtd_moves for the fixed value 48, that the maximun possible chain 
 
     # print("\n\n\nImpressão do perturbado:\n")
-    for value in moves_c:
-        print(value)
+    #for value in moves_c:
+        #print(value)
 
     c_difficulty_var = ctypes.c_int(difficulty_var)
 
@@ -370,7 +370,7 @@ def get_selected_difficulty():
     selected_difficulty = int(difficulty_spinbox.get())
     selected_difficulty_label.config(text=f"Dificuldade selecionada: {selected_difficulty}")
     difficulty_var = selected_difficulty
-    print(difficulty_var)
+    #print(difficulty_var)
 
 difficulty_button = tk.Button(menu, text="Definir Dificuldade", bg=color_submeter_button, fg="white", font=("Arial", 12, "bold"), command=get_selected_difficulty, relief=tk.RAISED, borderwidth=5)
 difficulty_button.pack(pady=10, padx=20, ipadx=10)
