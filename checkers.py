@@ -254,19 +254,19 @@ def entry_point():
     qtd_moves = len(list_of_moves)
     moves_c = (ctypes.c_int * qtd_moves)(*map(int, list_of_moves))  #Consider change qtd_moves for the fixed value 48, that the maximun possible chain 
 
-    print("\n\n\nImpressão do perturbado:\n")
+    # print("\n\n\nImpressão do perturbado:\n")
     for value in moves_c:
         print(value)
 
-    print("\n\n\nMandando a lista: ", list_of_moves, "\n\nDe tamanho: ", qtd_moves)
+    #print("\n\n\nMandando a lista: ", list_of_moves, "\n\nDe tamanho: ", qtd_moves)
 
     test = lib.entryPoint(board_ptr, ctypes.c_int(qtd_moves), moves_c, ctypes.byref(front_end_turn_var))
 
-    print("\n\nfront_end_turn foi como:", front_end_turn)
+    #print("\n\nfront_end_turn foi como:", front_end_turn)
 
     front_end_turn = front_end_turn_var.value
 
-    print("\nfront_end_turn voltou como:", front_end_turn)
+    #print("\nfront_end_turn voltou como:", front_end_turn)
 
     machine_move = []
     for i in range(4):

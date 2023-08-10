@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <omp.h>
 
 //////////////// -- DEFINE's -- ////////////////
 
-#define LEVEL_DEPTH 5
+#define LEVEL_DEPTH 8
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -826,16 +827,14 @@ int getNumberOfMaxCapturesFromPosition(
     return maxCaptures;
 }
 
-void getPossibleAttackChainsFromPosition
-(
+void getPossibleAttackChainsFromPosition(
     Board *board,
     Position *originPosition,
     Piece *pieceTested,
     enum PieceColor turn,
     IdStack *idStack,
     MovementSequence possibleAttackChain,
-    PossibleMovements *possibleMovements
-)
+    PossibleMovements *possibleMovements)
 {
 
     // Given a certain position and a piece to test, this function adds to the possibleMovementsList every
@@ -881,12 +880,12 @@ void getPossibleAttackChainsFromPosition
                     possibleAttackChain.numberOfMovements++;
                     getPossibleAttackChainsFromPosition(board, &testMovement.destiny, pieceTested, turn,
                                                         idStack, possibleAttackChain, possibleMovements);
-                    possibleAttackChain.numberOfMovements--;    //Removes the movement just added because it
-                                                                //interferes with the of the movementSequece
-                                                                //analysis made below (the analysis has to
-                                                                //consider only the movements added int the
-                                                                //sequence till here, without the move just
-                                                                //added)
+                    possibleAttackChain.numberOfMovements--; // Removes the movement just added because it
+                                                             // interferes with the of the movementSequece
+                                                             // analysis made below (the analysis has to
+                                                             // consider only the movements added int the
+                                                             // sequence till here, without the move just
+                                                             // added)
                 }
             }
         }
@@ -967,13 +966,11 @@ void capturePiece(Board *board, Piece *piece)
     }
 }
 
-void checkMovementSequence
-(
+void checkMovementSequence(
     Board *board,
     MovementSequence *movementSequence,
     enum PieceColor turn,
-    int ignoreMaxCapturesVerificationFlag 
-)
+    int ignoreMaxCapturesVerificationFlag)
 {
     enum MovementType movementType;
     Piece pieceMoving = board->square[getIndexOfPosition(movementSequence->seqMovements[0].origin)].piece;
@@ -1039,6 +1036,7 @@ enum Winner checkWinCondition(Board *board, enum PieceColor turn)
         return BlackWon;
     }
 
+    int foundValidMovementFlag = 0;
     // Tests for each piece of the opponent of the current turn player if it has any possible
     // movement to make. If it hasn't, then the player won
 
@@ -1056,13 +1054,22 @@ enum Winner checkWinCondition(Board *board, enum PieceColor turn)
                 testMove.destiny = board->square[j].position;
                 if (checkMovement(board, &testMove, &testPiece, !turn, 0) != Invalid)
                 {
-                    return NoOne;
+                    foundValidMovementFlag = 1;
+                    break;
                 }
             }
         }
+        if (foundValidMovementFlag)
+        {
+            break;
+        }
     }
 
-    if (turn == Black)
+    if (foundValidMovementFlag)
+    {
+        return NoOne;
+    }
+    else if (turn == Black)
     {
         return BlackWon;
     }
@@ -1336,7 +1343,7 @@ int evaluatePos(Board *board, enum PieceColor turn)
         printf("\nDebug: entrou no if winner == turn + 3");
         return STRONGEST_VALUE;
     }
-    else if(winner != NoOne)
+    else if (winner != NoOne)
     {
         printf("\nDebug: entrou no if winner != NoOne");
         return -1000;
@@ -1364,16 +1371,16 @@ int evaluatePos(Board *board, enum PieceColor turn)
         scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
     }
 
-    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn+1)%2) * STRONG_VALUE;
+    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn + 1) % 2) * STRONG_VALUE;
 
     int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
-    int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings + 
-                        scoreEminentKings + scorePossibleKings - scoreQtdCaptures + scoreCentralPieces;
+    int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings +
+                      scoreEminentKings + scorePossibleKings - scoreQtdCaptures + scoreCentralPieces;
     return pesoPosicao;
 }
 
 void printMovement(Movement *movement)
-{   
+{
     Position originPosition = movement->origin;
     Position destinyPosition = movement->destiny;
 
@@ -1382,12 +1389,12 @@ void printMovement(Movement *movement)
 }
 
 void printMovementSequence(MovementSequence *movementSequence)
-{   
+{
     Movement movement;
 
     printf("\nMovement Sequence of Type: %d", movementSequence->movementType);
     for (size_t i = 0; i < movementSequence->numberOfMovements; i++)
-    {       
+    {
         movement = movementSequence->seqMovements[i];
         printMovement(&movement);
     }
@@ -1411,8 +1418,7 @@ void getPossibleMovementsFromPosition(
     Board *board,
     PossibleMovements *possibleMovements,
     Position *testPosition,
-    enum PieceColor turn
-)
+    enum PieceColor turn)
 {
     Movement auxMovement;
     Square auxSquare;
@@ -1425,9 +1431,9 @@ void getPossibleMovementsFromPosition(
     // checks possible movements of the type Move and adds them to the possibleMovementsList
     // if identifies at least one possible attack, it means that because of the rules of the games, no move
     // can be made. So it calls the getPossibleAttackChainsFromPosition passing a pointer to possibleMovements,
-    // so the function can populate it with the possible and valid attacks that can be made
+    // so the function can populate it with the possible and valid attacks that can be made 
 
-    #pragma omp parallel for private(auxSquare, auxMovementSeq) shared(board)
+#pragma omp parallel for firstprivate(auxMovement) private(auxSquare, auxMovementSeq) shared(board)
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
         Board localBoard;
@@ -1441,7 +1447,7 @@ void getPossibleMovementsFromPosition(
             checkMovementSequence(&localBoard, &auxMovementSeq, turn, 1);
             if (auxMovementSeq.movementType == Move)
             {
-                #pragma omp critical
+#pragma omp critical
                 {
                     possibleMovements->possibleMovementList[possibleMovements->numberOfPossibleMovements] = auxMovementSeq;
                     possibleMovements->numberOfPossibleMovements++;
@@ -1455,27 +1461,25 @@ void getPossibleMovementsFromPosition(
                 getPossibleAttackChainsFromPosition(&localBoard, testPosition,
                                                     &localBoard.square[getIndexOfPosition(*testPosition)].piece,
                                                     turn, &idStack, auxMovementSeq, possibleMovements);
-                //printPossibleMovements(possibleMovements);
+                // printPossibleMovements(possibleMovements);
             }
         }
     }
 }
 
-void generateComputerMovement
-(
+void generateComputerMovement(
     Board *board,
     MovementSequence *movementSequence,
     int level,
     int depth,
-    int *parentNodeScore
-)
-{   
+    int *parentNodeScore)
+{
     enum NodeType thisNodeType = level % 2;
     enum PieceColor thisLevelTurn = level % 2;
     int thisNodeScore;
     Board localBoard = *board;
 
-    if(thisNodeType == Maximum)
+    if (thisNodeType == Maximum)
     {
         thisNodeScore = INT_MIN;
     }
@@ -1498,16 +1502,14 @@ void generateComputerMovement
             break;
         }
     }
-    
 
     PossibleMovements possibleMovements[PIECES_PER_PLAYER];
     Square auxSquare;
     int possibleMovesIndexCounter = 0;
 
-    if(level == depth || checkWinCondition(board, thisLevelTurn) != NoOne)
+    if (level == depth || checkWinCondition(board, thisLevelTurn) != NoOne)
     {
-        printf("\nDebug: level: %d", level);
-        thisNodeScore = evaluatePos(&localBoard, turn); 
+        thisNodeScore = evaluatePos(&localBoard, turn);
     }
     else if (level < depth)
     {
@@ -1522,7 +1524,7 @@ void generateComputerMovement
             }
         }
 
-        #pragma omp parallel for
+    #pragma omp parallel for
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
             for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
@@ -1532,19 +1534,19 @@ void generateComputerMovement
             }
         }
     }
-    
+
     if (thisNodeType == Maximum)
     {
-        if(thisNodeScore < *parentNodeScore)    /*The local node value must be minor than parent value, cause in the minimax search tree,
-                                                *if father level is a minimum, so it will search, in its children, for a move that minimize the state.
-                                                *In this line, if this node is maximum, so the fathers have to be a minimum.
-                                                */
+        if (thisNodeScore < *parentNodeScore) /*The local node value must be minor than parent value, cause in the minimax search tree,
+                                               *if father level is a minimum, so it will search, in its children, for a move that minimize the state.
+                                               *In this line, if this node is maximum, so the fathers have to be a minimum.
+                                               */
         {
-            #pragma omp critical
+#pragma omp critical
             {
                 *parentNodeScore = thisNodeScore;
                 if (level == 2)
-                {   
+                {
                     printf("\nDebug: Entrou no if level == 2");
                     computerMovement = *movementSequence;
                     printMovementSequence(&computerMovement);
@@ -1556,7 +1558,7 @@ void generateComputerMovement
     {
         if (thisNodeScore > *parentNodeScore)
         {
-            #pragma opm critical
+#pragma opm critical
             {
                 *parentNodeScore = thisNodeScore;
                 if (level == 2)
@@ -1589,8 +1591,6 @@ void makeComputerMovement(Board *board, MovementSequence *computerMovement, enum
     }
 }
 
-
-
 void writeComputerMovementOnFrontEnd(int listOfMovements[])
 {
     listOfMovements[0] = computerMovement.seqMovements[0].origin.row;
@@ -1609,7 +1609,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     turn = *frontEndTurn;
 
-    Board testBoard;        //testBoard that the function generateComputerMovement can freely edit
+    Board testBoard; // testBoard that the function generateComputerMovement can freely edit
     enum Winner winner;
     int firstNodeScore = INT_MAX;
 
@@ -1617,6 +1617,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     Board board = parseBoardFromMatrix(matrixBoard);
     MovementSequence movementSequence = parseMovementSequenceFromArray(numberOfItens, listOfMovements);
+    double initTime, finalTime;
 
     checkMovementSequence(&board, &movementSequence, turn, 0);
 
@@ -1632,7 +1633,10 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
+        initTime = omp_get_wtime();
         generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
+        finalTime = omp_get_wtime();
+        printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         globalScore = INT_MIN;
 
         makeComputerMovement(&board, &computerMovement, turn);
@@ -1657,7 +1661,10 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         testBoard = board;
+        initTime = omp_get_wtime();
         generateComputerMovement(&testBoard, &movementSequence, 1, LEVEL_DEPTH, &firstNodeScore);
+        finalTime = omp_get_wtime();
+        printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         globalScore = INT_MIN;
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(listOfMovements);
@@ -1684,16 +1691,15 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 void testFunction1()
 {
     int matrix[8][8] =
-    {
-        {1, 0, 1, 0, 1, 0, 1, 0},
-        {0, 1, 0, 1, 0, 1, 0, 1},
-        {1, 0, 1, 0, 1, 0, 1, 0},
-        {0, 0, 0, 0, 0, 2, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 2, 0, 2, 0, 2, 0, 2},
-        {2, 0, 2, 0, 0, 0, 2, 0},
-        {0, 2, 0, 2, 0, 2, 0, 2}
-    };
+        {
+            {1, 0, 1, 0, 1, 0, 1, 0},
+            {0, 1, 0, 1, 0, 1, 0, 1},
+            {1, 0, 1, 0, 1, 0, 1, 0},
+            {0, 0, 0, 0, 0, 2, 0, 0},
+            {0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 2, 0, 2, 0, 2, 0, 2},
+            {2, 0, 2, 0, 0, 0, 2, 0},
+            {0, 2, 0, 2, 0, 2, 0, 2}};
 
     Board board = parseBoardFromMatrix(matrix);
     printBoard(&board, 0);
@@ -1710,20 +1716,20 @@ void testFunction1()
         if (auxSquare.state == Occupied && auxSquare.piece.color == thisLevelTurn)
         {
             getPossibleMovementsFromPosition(&board, &possibleMovements[possibleMovesIndexCounter],
-                                                &auxSquare.position, thisLevelTurn);
+                                             &auxSquare.position, thisLevelTurn);
             possibleMovesIndexCounter++;
         }
     }
 
     for (int i = 0; i < possibleMovesIndexCounter; i++)
     {
-        if(possibleMovements[i].numberOfPossibleMovements != 0)
+        if (possibleMovements[i].numberOfPossibleMovements != 0)
         {
-            printf("\npossibleMovements peca %d", i+1);
+            printf("\npossibleMovements peca %d", i + 1);
         }
         else
         {
-            printf("\nNenhum possibleMovement para a peca %d", i+1);
+            printf("\nNenhum possibleMovement para a peca %d", i + 1);
         }
     }
     printf("\n");
@@ -1748,10 +1754,8 @@ int main(void)
     // Board board = parseBoardFromMatrix(matrix);
     // printBoard(&board, 0);
 
-
     // int numOfItens = 4;
     // int list_moves[4] = {2, 0, 3, 1};
-
 
     // TEST HARDCODED POSITIONS
 
