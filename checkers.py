@@ -17,6 +17,7 @@ qtd_moves = 0
 list_of_moves = []
 front_end_turn = int(0)
 which_movement = 0  #This variable is specifically to tell if is the first square of the move, so it will not be duplicated
+difficulty_var = 2
 
 # Initialization of the piece's positions
 # Setting white as 1
@@ -94,6 +95,15 @@ def define_initial_pos():
         board_pos[5][7-7] = 0
         board_pos[4][7-6] = 2
     print_board()
+
+    #for i in range(8):
+    #    for j in range(8):
+    #        board_pos[i][j] = 0
+    #board_pos[2][1] = 3
+    #board_pos[2][3] = 3
+    #board_pos[6][1] = 2
+    #board_pos[6][3] = 2
+    #print_board()
 
 def format_moves_to_string(moves):
     columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
@@ -223,7 +233,7 @@ def play_audio(file_path):
     pygame.mixer.music.play()
 
 def entry_point():
-    global board_pos, board_pos_send ,list_of_moves, qtd_moves, front_end_turn
+    global board_pos, board_pos_send ,list_of_moves, qtd_moves, front_end_turn, difficulty_var
     for i in range(8):
         for j in range(8):
             board_pos_send[i][7-j] = board_pos[i][j]
@@ -258,9 +268,11 @@ def entry_point():
     for value in moves_c:
         print(value)
 
+    c_difficulty_var = ctypes.c_int(difficulty_var)
+
     #print("\n\n\nMandando a lista: ", list_of_moves, "\n\nDe tamanho: ", qtd_moves)
 
-    test = lib.entryPoint(board_ptr, ctypes.c_int(qtd_moves), moves_c, ctypes.byref(front_end_turn_var))
+    test = lib.entryPoint(board_ptr, ctypes.c_int(qtd_moves), moves_c, ctypes.byref(front_end_turn_var), c_difficulty_var)
 
     #print("\n\nfront_end_turn foi como:", front_end_turn)
 
@@ -342,12 +354,39 @@ btn_iniciar.pack(pady=10, padx=20, ipadx=10)
 btn_definir = tk.Button(menu, text="Reiniciar (Máquina inicia jogando)", bg=color_definir_button, fg="white", font=("Arial", 12, "bold"), command=define_initial_pos, relief=tk.RAISED, borderwidth=5)
 btn_definir.pack(pady=10, padx=20, ipadx=10)
 
+difficulty_label = tk.Label(menu, text="Dificuldade:", font=("Arial", 12, "bold"), bg=color_secondary)
+difficulty_label.pack(pady=10)
+
+difficulty_spinbox = tk.Spinbox(menu, from_=2, to=15, font=("Arial", 12), width=10)
+#difficulty_spinbox.set(2)  # Define a dificuldade inicial como 2
+difficulty_spinbox.pack(pady=5)
+
+selected_difficulty_label = tk.Label(menu, text="", font=("Arial", 12), bg=color_secondary)
+selected_difficulty_label.pack()
+selected_difficulty_label.config(text=f"Dificuldade selecionada: {2}")
+
+def get_selected_difficulty():
+    global difficulty_var
+    selected_difficulty = int(difficulty_spinbox.get())
+    selected_difficulty_label.config(text=f"Dificuldade selecionada: {selected_difficulty}")
+    difficulty_var = selected_difficulty
+    print(difficulty_var)
+
+difficulty_button = tk.Button(menu, text="Definir Dificuldade", bg=color_submeter_button, fg="white", font=("Arial", 12, "bold"), command=get_selected_difficulty, relief=tk.RAISED, borderwidth=5)
+difficulty_button.pack(pady=10, padx=20, ipadx=10)
+
 btn_sair = tk.Button(menu, text="Sair do Programa", bg=color_sair_button, fg="white", font=("Arial", 12, "bold"), command=root.quit, relief=tk.RAISED, borderwidth=5)
 btn_sair.pack(pady=10, padx=20, ipadx=10)
 
 # Rounding submit button
 btn_submeter = tk.Button(root, text="Submeter Jogada", bg=color_submeter_button, fg="white", font=("Arial", 16, "bold"), command=submit_move, relief=tk.RAISED, borderwidth=5)
 btn_submeter.grid(row=1, column=0, columnspan=2, pady=0)
+
+def on_key(event):
+    if event.keysym in ["Return", "space"]:
+        submit_move()
+
+root.bind("<Key>", on_key)
 
 # Stule for labelFrame
 s = ttk.Style()
@@ -370,7 +409,7 @@ path_to_library = os.path.join(path_project, "lib.so")
 lib = ctypes.CDLL(path_to_library)
 
 #Define types to pass as arguments and the return (int mat[8][8], int qtd, int array[qtd])
-lib.entryPoint.argtypes = [ctypes.POINTER(MatrixType), ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+lib.entryPoint.argtypes = [ctypes.POINTER(MatrixType), ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), ctypes.c_int]
 lib.entryPoint.restype = ctypes.c_int
 
 # Run graphic interface

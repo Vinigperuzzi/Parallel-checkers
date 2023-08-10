@@ -8,7 +8,7 @@
 
 //////////////// -- DEFINE's -- ////////////////
 
-#define LEVEL_DEPTH 8
+//#define LEVEL_DEPTH 5
 #define SQUARES_PER_ROW 8
 #define TOTAL_SQUARES SQUARES_PER_ROW *SQUARES_PER_ROW
 #define PLAYABLE_SQUARES_PER_ROW SQUARES_PER_ROW / 2
@@ -139,6 +139,7 @@ char blackSquare[9] = "\033[40m";
 enum PieceColor turn = White;
 int globalScore = INT_MIN;
 MovementSequence computerMovement;
+int LEVEL_DEPTH = 2;
 
 //////////////// -- STACK IMPL -- ////////////////
 
@@ -1507,7 +1508,7 @@ void generateComputerMovement(
     Square auxSquare;
     int possibleMovesIndexCounter = 0;
 
-    if (level == depth || checkWinCondition(board, thisLevelTurn) != NoOne)
+    if (level == depth || checkWinCondition(&localBoard, thisLevelTurn) != NoOne)
     {
         thisNodeScore = evaluatePos(&localBoard, turn);
     }
@@ -1599,7 +1600,7 @@ void writeComputerMovementOnFrontEnd(int listOfMovements[])
     listOfMovements[3] = computerMovement.seqMovements[computerMovement.numberOfMovements - 1].destiny.col;
 }
 
-int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn)
+int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[numberOfItens], int *frontEndTurn, int frontdifficulty)
 {
 
     // Function to establish connection between front and back end. The front end calls this function passing
@@ -1608,6 +1609,8 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
     // used here, then evaluates the movement that is trying to be made and act upon its type
 
     turn = *frontEndTurn;
+    LEVEL_DEPTH = frontdifficulty;
+    printf("\n\n\n\t\t\tA dificuldade foi setada como: %d\n\n", LEVEL_DEPTH);
 
     Board testBoard; // testBoard that the function generateComputerMovement can freely edit
     enum Winner winner;
