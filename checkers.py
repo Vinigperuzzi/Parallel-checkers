@@ -160,13 +160,17 @@ def submit_move():
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
     print_board()
 
+def drop_move():
+    global list_of_moves, which_movement
+    print_board()
+    which_movement = 0
+    list_of_moves.clear()
+
 def print_coordinates(event):
     global qtd_moves, list_of_moves, which_movement
     widget = event.widget
     if isinstance(widget, tk.Label) and (which_movement):
-        print_board()
-        which_movement = 0
-        list_of_moves.clear()
+        drop_move()
         return
     if isinstance(widget, tk.Label):  # Verify if a piece has been clicked or a square
         col, row = widget.master.grid_info()["column"], str(7 - int(widget.master.grid_info()["row"]))
@@ -372,6 +376,15 @@ def get_selected_difficulty():
     difficulty_var = selected_difficulty
     #print(difficulty_var)
 
+def get_selected_difficulty_manually(condition):
+    global difficulty_var
+    if condition == 1:
+        difficulty_var += 1
+    else:
+        difficulty_var -= 1
+    selected_difficulty_label.config(text=f"Dificuldade selecionada: {difficulty_var}")
+
+
 difficulty_button = tk.Button(menu, text="Definir Dificuldade", bg=color_submeter_button, fg="white", font=("Arial", 12, "bold"), command=get_selected_difficulty, relief=tk.RAISED, borderwidth=5)
 difficulty_button.pack(pady=10, padx=20, ipadx=10)
 
@@ -385,8 +398,27 @@ btn_submeter.grid(row=1, column=0, columnspan=2, pady=0)
 def on_key(event):
     if event.keysym in ["Return", "space"]:
         submit_move()
+    if event.keysym in ["Escape"]:
+        drop_move()
+    if event.keysym in ["r", "R"]:
+        start_game()
+
+def on_arrow_up(event):
+    global difficulty_var
+    if difficulty_var < 15:
+        get_selected_difficulty_manually(1)
+        difficulty_spinbox.configure(textvariable=difficulty_var)   
+
+def on_arrow_down(event):
+    global difficulty_var
+    if difficulty_var > 2:
+        get_selected_difficulty_manually(0)
+        difficulty_spinbox.configure(textvariable=difficulty_var)      
+
 
 root.bind("<Key>", on_key)
+root.bind("<Up>", on_arrow_up)
+root.bind("<Down>", on_arrow_down)
 
 # Stule for labelFrame
 s = ttk.Style()
@@ -414,3 +446,12 @@ lib.entryPoint.restype = ctypes.c_int
 
 # Run graphic interface
 root.mainloop()
+
+
+
+#IDEIA: Clicar no numero do teclado para setar a dificuldade:
+
+# Clicar "1" seta a dificulade para 1
+# Clicar "2" seta a dificulade para 2
+# ...
+# Depois eu vou tentar atualizar dentro do spinbox também

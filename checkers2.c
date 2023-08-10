@@ -1511,7 +1511,7 @@ void generateComputerMovement(
         thisNodeScore = evaluatePos(&localBoard, computerColor);
     }
     else if (level < depth)
-    {
+    {   
         for (size_t i = 0; i < TOTAL_SQUARES; ++i)
         {
             auxSquare = localBoard.square[i];
@@ -1519,7 +1519,7 @@ void generateComputerMovement(
             {
                 getPossibleMovementsFromPosition(&localBoard, &possibleMovements[possibleMovesIndexCounter],
                                                  &auxSquare.position, thisLevelTurn);
-                possibleMovesIndexCounter++;
+                    possibleMovesIndexCounter++;
             }
         }
 
