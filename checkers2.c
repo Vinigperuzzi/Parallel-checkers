@@ -15,7 +15,7 @@
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
-#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 40
+#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 50
 #define WEIGHT_DIFF_PIECES 0.9
 #define WEIGHT_QTD_KINGS 0.25
 #define WEIGHT_EMINENT_KINGS 0.150 // pieces one square from promotion
@@ -1431,7 +1431,7 @@ void getPossibleMovementsFromPosition(
     // can be made. So it calls the getPossibleAttackChainsFromPosition passing a pointer to possibleMovements,
     // so the function can populate it with the possible and valid attacks that can be made 
 
-#pragma omp parallel for firstprivate(auxMovement) private(auxSquare, auxMovementSeq) shared(board)
+    #pragma omp parallel for firstprivate(auxMovement) private(auxSquare, auxMovementSeq) shared(board)
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
         Board localBoard;

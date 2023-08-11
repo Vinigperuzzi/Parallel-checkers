@@ -395,6 +395,34 @@ btn_sair.pack(pady=10, padx=20, ipadx=10)
 btn_submeter = tk.Button(root, text="Submeter Jogada", bg=color_submeter_button, fg="white", font=("Arial", 16, "bold"), command=submit_move, relief=tk.RAISED, borderwidth=5)
 btn_submeter.grid(row=1, column=0, columnspan=2, pady=0)
 
+def show_information_popup():
+    root = tk.Toplevel()
+    root.title("Sobre nós")
+
+    text_widget = tk.Text(root, wrap=tk.WORD, font=("Arial", 12))
+    text_widget.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+    information = (
+        "Esse trabalho é uma tarefa da disciplina de IPPD do curso de Ciência da Computação da Universidade Federal de Pelotas.\n"
+        "Esse trabalho foi realizado pelos alunos Allan N. Schuch e Vinícius G. Peruzzi.\n"
+        "Visite nossas páginas...\n"
+        "https://github.com/allanschuch\n"
+        "https://github.com/Vinigperuzzi\n"
+        "https://vinigperuzzi.github.io/PersonalPage/\n"
+        "\n\n\n"
+        "Dica de atalhos:\n"
+        "Os botões 'barra de espaço' e 'enter' submetem a jogada.\n"
+        "O botão 'Esc' limpa uma jogada informada.\n"
+        "Os botões 'cima' e 'baixo' são atalhos para aumentar ou diminuir a dificuldade, sem necessidade de definir no botão, basta mudar.\n"
+        "O botão 'R' reinicia o tabuleiro.\n\n"
+        "Esperamos que você goste e se divirta..."
+    )
+
+    text_widget.insert(tk.END, information)
+
+btn_info = tk.Button(root, text="?", font=("Arial", 14, "bold"), bg=color_sair_button, fg=color_submeter_button, command=show_information_popup)
+btn_info.grid(row=8, column=10, padx=10, pady=(0, 10))
+
 def on_key(event):
     if event.keysym in ["Return", "space"]:
         submit_move()

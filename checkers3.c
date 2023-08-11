@@ -15,7 +15,7 @@
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
-#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 40
+#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 50
 #define WEAK_VALUE 1
 #define MEDIUM_WEAK_VALUE 3
 #define MEDIUM_VALUE 5
@@ -133,7 +133,6 @@ char blackSquare[9] = "\033[40m";
 enum PieceColor turn = White;
 MovementSequence computerMovement;
 int Level_Depth;
-int totalStates = 0;
 
 //////////////// -- STACK IMPL -- ////////////////
 
@@ -1031,10 +1030,10 @@ enum Winner checkWinCondition(Board *board, enum PieceColor turn)
         return BlackWon;
     }
 
-    int foundValidMovementFlag = 0;
     // Tests for each piece of the opponent of the current turn player if it has any possible
     // movement to make. If it hasn't, then the player won
 
+    int foundValidMovementFlag = 0;
     Movement testMove;
     Piece testPiece;
 
@@ -1364,7 +1363,7 @@ int evaluatePos(Board *board, enum PieceColor turn)
         scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
     }
 
-    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn + 1) % 2) * STRONG_VALUE;
+    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn + 1) % 2) * MEDIUM_VALUE;
 
     int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
     int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings +
@@ -1509,12 +1508,8 @@ int generateComputerMovement(
     }
 
 
-    if (level == depth || checkWinCondition(&localBoard, thisLevelTurn) != NoOne)
+    if (level == depth)
     {
-        #pragma omp critical
-        {
-            totalStates++;
-        }
         return evaluatePos(&localBoard, computerTurn);
     }
 
@@ -1538,6 +1533,21 @@ int generateComputerMovement(
                                                     &auxSquare.position, thisLevelTurn);
                 possibleMovesIndexCounter++;
             }
+        }
+
+        int flag = 0;
+
+        for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
+        {
+            if(possibleMovements[possibleMovesIndexCounter].numberOfPossibleMovements != 0)
+            {
+                flag = 1;
+                break;
+            }
+        }
+        if(flag)
+        {
+            return evaluatePos(&localBoard, computerTurn);
         }
 
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
@@ -1621,7 +1631,7 @@ void generateComputerMovementParallel(
         }
     }
 
-    #pragma omp parallel for private(childScore) firstprivate(bestScore)
+    #pragma omp parallel for private(childScore) schedule(dynamic, 1)
     for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
     {
         for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
@@ -1677,7 +1687,6 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     turn = *frontEndTurn;
     Level_Depth = frontEndDifficulty;
-    printf("\n\nA dificuldade foi setada como: %d\n", Level_Depth);
 
     enum Winner winner;
     int firstNodeScore = INT_MAX;
@@ -1703,7 +1712,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         initTime = omp_get_wtime();
         generateComputerMovementParallel(&board, Level_Depth, turn);
         finalTime = omp_get_wtime();
-        printf("\n\nTime elapsed: %f segundos\n\nTotal final states: %d", finalTime - initTime, totalStates);
+        printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
@@ -1718,7 +1727,6 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     case Attack:
         makeAttack(&board, &movementSequence);
-        // printBoard(&board, 0);
         winner = checkWinCondition(&board, turn);
         if (winner != NoOne) // check if someone won the game. If no one won, return the attack authorization
         {
@@ -1865,7 +1873,3 @@ int main(void)
 }
 
 // TO DO LIST
-
-// Testar colocar um laço paralelo no primeiro for do generatecomputerMovement
-// 
-// Dar um jeito de nao usar checkWinCondition no começo da função generateComouterMovement
