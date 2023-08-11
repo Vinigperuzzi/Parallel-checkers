@@ -15,7 +15,7 @@
 #define PIECES_PER_PLAYER 12
 #define TOTAL_PIECES PIECES_PER_PLAYER * 2
 #define MAX_MOVEMENTS_PER_TURN 12
-#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 40
+#define MAX_POSSIBLE_AVAILABLE_MOVES_PER_PIECE 50
 #define WEAK_VALUE 1
 #define MEDIUM_WEAK_VALUE 3
 #define MEDIUM_VALUE 5
@@ -133,7 +133,6 @@ char blackSquare[9] = "\033[40m";
 enum PieceColor turn = White;
 MovementSequence computerMovement;
 int Level_Depth;
-int totalStates = 0;
 
 //////////////// -- STACK IMPL -- ////////////////
 
@@ -1511,10 +1510,6 @@ int generateComputerMovement(
 
     if (level == depth || checkWinCondition(&localBoard, thisLevelTurn) != NoOne)
     {
-        #pragma omp critical
-        {
-            totalStates++;
-        }
         return evaluatePos(&localBoard, computerTurn);
     }
 
@@ -1621,7 +1616,7 @@ void generateComputerMovementParallel(
         }
     }
 
-    #pragma omp parallel for private(childScore) firstprivate(bestScore)
+    #pragma omp parallel for private(childScore) schedule(dynamic, 1)
     for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
     {
         for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
@@ -1677,7 +1672,6 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     turn = *frontEndTurn;
     Level_Depth = frontEndDifficulty;
-    printf("\n\nA dificuldade foi setada como: %d\n", Level_Depth);
 
     enum Winner winner;
     int firstNodeScore = INT_MAX;
@@ -1703,7 +1697,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         initTime = omp_get_wtime();
         generateComputerMovementParallel(&board, Level_Depth, turn);
         finalTime = omp_get_wtime();
-        printf("\n\nTime elapsed: %f segundos\n\nTotal final states: %d", finalTime - initTime, totalStates);
+        printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         makeComputerMovement(&board, &computerMovement, turn);
         writeComputerMovementOnFrontEnd(listOfMovements);
         updateMatrixBoard(&board, matrixBoard); // update the front end board data structure
