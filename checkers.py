@@ -1,13 +1,11 @@
 import os
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
 from PIL import Image, ImageTk
 import ctypes
 import numpy as np
 import pygame
 import random
-import webbrowser
 
 # Creation of matrice 8x8 board position
 board_pos = [[0 for _ in range(8)] for _ in range(8)]
