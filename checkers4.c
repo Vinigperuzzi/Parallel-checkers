@@ -1494,7 +1494,7 @@ int generateComputerMovement(
 {
     Board localBoard = *board;
     enum PieceColor thisLevelTurn = level % 2;
-
+    
     switch (movementSequence->movementType)
     {
     case Move:
@@ -1507,8 +1507,7 @@ int generateComputerMovement(
         break;
     }
 
-
-    if (level == depth || checkWinCondition(&localBoard, computerTurn))
+    if (level == depth)
     {
         return evaluatePos(&localBoard, computerTurn);
     }
@@ -1535,20 +1534,20 @@ int generateComputerMovement(
             }
         }
 
-        // int flag = 0;
+        int flag = 0;
 
-        // for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
-        // {
-        //     if(possibleMovements[possibleMovesIndexCounter].numberOfPossibleMovements > 0)
-        //     {
-        //         flag = 1;
-        //         break;
-        //     }
-        // }
-        // if(!flag)
-        // {
-        //     return evaluatePos(&localBoard, computerTurn);
-        // }
+        for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
+        {
+            if(possibleMovements[possibleMovesIndexCounter].numberOfPossibleMovements != 0)
+            {
+                flag = 1;
+                break;
+            }
+        }
+        if(flag)
+        {
+            return evaluatePos(&localBoard, computerTurn);
+        }
 
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
@@ -1585,22 +1584,6 @@ int generateComputerMovement(
             }
         }
 
-        // int flag = 0;
-
-        // for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
-        // {
-        //     if(possibleMovements[possibleMovesIndexCounter].numberOfPossibleMovements > 0)
-        //     {
-        //         flag = 1;
-        //         break;
-        //     }
-        // }
-        // if(!flag)
-        // {
-        //     return evaluatePos(&localBoard, computerTurn);
-        // }
-
-
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
             for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
@@ -1625,12 +1608,42 @@ int generateComputerMovement(
 
 void generateComputerMovementParallel(
     Board *board,
+    MovementSequence *movementSequence,
+    int level,
     int depth,
-    enum PieceColor computerTurn
+    int lastParallelLevel,
+    int *parentNodeScore,
+    enum PieceColor computerColor
 )
 {
+    Board localBoard = *board;
     int childScore;
-    int bestScore = INT_MIN;
+    int thisNodeScore;
+    enum NodeType thisNodeType = level % 2;
+
+    if (thisNodeType == Maximum)
+    {
+        thisNodeScore = INT_MIN;
+    }
+    else
+    {
+        thisNodeScore = INT_MAX;
+    }
+
+    if (level > 1)
+    {
+        switch (movementSequence->movementType)
+        {
+        case Move:
+            movePiece(&localBoard, movementSequence->seqMovements[0]);
+            break;
+        case Attack:
+            makeAttack(&localBoard, movementSequence);
+            break;
+        default:
+            break;
+        }
+    }
 
     PossibleMovements possibleMovements[PIECES_PER_PLAYER];
     Square auxSquare;
@@ -1639,27 +1652,88 @@ void generateComputerMovementParallel(
     for (size_t i = 0; i < TOTAL_SQUARES; ++i)
     {
         auxSquare = board->square[i];
-        if (auxSquare.state == Occupied && auxSquare.piece.color == computerTurn)
+        if (auxSquare.state == Occupied && auxSquare.piece.color == computerColor)
         {
-            getPossibleMovementsFromPosition(board, &possibleMovements[possibleMovesIndexCounter],
-                                             &auxSquare.position, computerTurn);
+            getPossibleMovementsFromPosition(&localBoard, &possibleMovements[possibleMovesIndexCounter],
+                                                &auxSquare.position, computerColor);
             possibleMovesIndexCounter++;
         }
     }
 
-    #pragma omp parallel for private(childScore) schedule(dynamic, 1)
-    for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
+    if(level > lastParallelLevel)
     {
-        for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
+        #pragma omp parallel for private(childScore) schedule(dynamic, 1)
+        for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
         {
-            childScore = generateComputerMovement(board, &possibleMovements[i].possibleMovementList[j],
-                                                  2, depth, INT_MIN, INT_MAX, computerTurn);
-            if(childScore > bestScore)
+            for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
             {
-                #pragma omp critical
+                childScore = generateComputerMovement(&localBoard, &possibleMovements[i].possibleMovementList[j],
+                                                    level + 1, depth, INT_MIN, INT_MAX, computerColor);
+                if(thisNodeType == Maximum)
                 {
-                    bestScore = childScore;
-                    computerMovement = possibleMovements[i].possibleMovementList[j];
+                    if(childScore > thisNodeScore)
+                    {
+                        #pragma omp critical
+                        {
+                            thisNodeScore = childScore;
+                            computerMovement = possibleMovements[i].possibleMovementList[j];
+                        }
+                    }
+                }
+                else
+                {
+                    if(childScore < thisNodeScore)
+                    {
+                        #pragma omp critical
+                        {
+                            thisNodeScore = childScore;
+                            computerMovement = possibleMovements[i].possibleMovementList[j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        #pragma omp parallel for schedule(dynamic, 1)
+        for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
+        {
+            for (size_t j = 0; j < possibleMovements[i].numberOfPossibleMovements; ++j)
+            {
+                generateComputerMovementParallel(&localBoard, &possibleMovements[i].possibleMovementList[j], level + 1,
+                                         depth, lastParallelLevel, &thisNodeScore, computerColor);
+            }
+        }
+    }
+
+    if (thisNodeType == Maximum)
+    {
+        if (thisNodeScore < *parentNodeScore) /*The local node value must be minor than parent value, cause in the minimax search tree,
+                                               *if father level is a minimum, so it will search, in its children, for a move that minimize the state.
+                                               *In this line, if this node is maximum, so the fathers have to be a minimum.
+                                               */
+        {
+            #pragma omp critical
+            {
+                *parentNodeScore = thisNodeScore;
+                if (level == 2)
+                {
+                    computerMovement = *movementSequence;
+                }
+            }
+        }
+    }
+    else
+    {
+        if (thisNodeScore > *parentNodeScore)
+        {
+        #pragma omp critical
+            {
+                *parentNodeScore = thisNodeScore;
+                if (level == 2)
+                {
+                    computerMovement = *movementSequence;
                 }
             }
         }
@@ -1726,7 +1800,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         initTime = omp_get_wtime();
-        generateComputerMovementParallel(&board, Level_Depth, turn);
+        generateComputerMovementParallel(&board, &movementSequence, 1, Level_Depth, 1, &firstNodeScore, turn);
         finalTime = omp_get_wtime();
         printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         makeComputerMovement(&board, &computerMovement, turn);
@@ -1750,7 +1824,7 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
         }
         swapTurn(frontEndTurn);
         initTime = omp_get_wtime();
-        generateComputerMovementParallel(&board, Level_Depth, turn);
+        generateComputerMovementParallel(&board, &movementSequence, 1, Level_Depth, 1, &firstNodeScore, turn);
         finalTime = omp_get_wtime();
         printf("\n\nTime elapsed: %f segundos\n\n", finalTime - initTime);
         makeComputerMovement(&board, &computerMovement, turn);
@@ -1889,5 +1963,3 @@ int main(void)
 }
 
 // TO DO LIST
-
-// Dar um jeito de nao usar checkWinCondition no começo da função generateComouterMovement
