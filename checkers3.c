@@ -1030,10 +1030,10 @@ enum Winner checkWinCondition(Board *board, enum PieceColor turn)
         return BlackWon;
     }
 
-    int foundValidMovementFlag = 0;
     // Tests for each piece of the opponent of the current turn player if it has any possible
     // movement to make. If it hasn't, then the player won
 
+    int foundValidMovementFlag = 0;
     Movement testMove;
     Piece testPiece;
 
@@ -1363,7 +1363,7 @@ int evaluatePos(Board *board, enum PieceColor turn)
         scorePossibleKings = checkQtdPiecesInRank(*board, turn, 2) * MEDIUM_WEAK_VALUE;
     }
 
-    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn + 1) % 2) * STRONG_VALUE;
+    int scoreQtdCaptures = getMaxPossibleCaptures(board, (turn + 1) % 2) * MEDIUM_VALUE;
 
     int scoreCentralPieces = checkCentralPieces(*board, turn) * WEAK_VALUE;
     int pesoPosicao = scoreQtdpieces + scoreKings - scoreQtdAdversarypieces - scoreAdvsersaryKings +
@@ -1508,7 +1508,7 @@ int generateComputerMovement(
     }
 
 
-    if (level == depth || checkWinCondition(&localBoard, thisLevelTurn) != NoOne)
+    if (level == depth)
     {
         return evaluatePos(&localBoard, computerTurn);
     }
@@ -1533,6 +1533,21 @@ int generateComputerMovement(
                                                     &auxSquare.position, thisLevelTurn);
                 possibleMovesIndexCounter++;
             }
+        }
+
+        int flag = 0;
+
+        for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
+        {
+            if(possibleMovements[possibleMovesIndexCounter].numberOfPossibleMovements != 0)
+            {
+                flag = 1;
+                break;
+            }
+        }
+        if(flag)
+        {
+            return evaluatePos(&localBoard, computerTurn);
         }
 
         for (size_t i = 0; i < possibleMovesIndexCounter; ++i)
@@ -1712,7 +1727,6 @@ int entryPoint(int matrixBoard[8][8], int numberOfItens, int listOfMovements[num
 
     case Attack:
         makeAttack(&board, &movementSequence);
-        // printBoard(&board, 0);
         winner = checkWinCondition(&board, turn);
         if (winner != NoOne) // check if someone won the game. If no one won, return the attack authorization
         {
@@ -1859,7 +1873,3 @@ int main(void)
 }
 
 // TO DO LIST
-
-// Testar colocar um laço paralelo no primeiro for do generatecomputerMovement
-// 
-// Dar um jeito de nao usar checkWinCondition no começo da função generateComouterMovement

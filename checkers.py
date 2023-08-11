@@ -136,26 +136,26 @@ def submit_move():
     test = entry_point()
     if test[4] == 0:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
-        #path_to_audio = os.path.join(path_project, "Invalid.mp3")
-        #play_audio(path_to_audio)
+        path_to_audio = os.path.join(path_project, "Invalid.mp3")
+        play_audio(path_to_audio)
     elif test[4] == 1:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
-        #path_to_audio = os.path.join(path_project, "Move.wav")
-        #play_audio(path_to_audio)
+        path_to_audio = os.path.join(path_project, "Move.wav")
+        play_audio(path_to_audio)
     elif test[4] == 2:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
-        #path_to_audio = os.path.join(path_project, "Attack.wav")
-        #play_audio(path_to_audio)
+        path_to_audio = os.path.join(path_project, "Attack.wav")
+        play_audio(path_to_audio)
     elif test[4] == 3:
         set_end_board(test[4])
         status_label.config(text="Brancas ganharam", fg="blue")  # Update the status label text
-        #path_to_audio = os.path.join(path_project, "end.mp3")
-        #play_audio(path_to_audio)
+        path_to_audio = os.path.join(path_project, "end.mp3")
+        play_audio(path_to_audio)
     elif test[4] == 4:
         set_end_board(test[4])
         status_label.config(text="Negras ganharam", fg="blue")  # Update the status label text
-        #path_to_audio = os.path.join(path_project, "end.mp3")
-        #play_audio(path_to_audio)
+        path_to_audio = os.path.join(path_project, "end.mp3")
+        play_audio(path_to_audio)
     else:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
     print_board()
