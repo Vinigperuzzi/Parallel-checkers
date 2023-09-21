@@ -355,7 +355,7 @@ void printBoard(Board *board, int option)
         }
         printf("\n");
     }
-    printf("\t\t\t   ");
+    printf("\t\t\t  ");
     for (size_t i = 0; i < SQUARES_PER_ROW; i++)
     {
         printf("\033[46m");
@@ -1847,8 +1847,9 @@ int playGame(Board *board, MovementSequence *movementSequence, enum PieceColor *
 int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
-    int rank, possibleMovesIndexCounter = 0, minimaxScore, maxGlobalScore, bestLocalScore = INT_MIN;
+    int rank, numProc, possibleMovesIndexCounter = 0, minimaxScore, maxGlobalScore, bestLocalScore = INT_MIN;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numProc);
     Board board;
     enum PieceColor turn = White;
     MovementSequence computerMovement;
@@ -1920,16 +1921,13 @@ int main(int argc, char **argv)
         MPI_Bcast(&board, boardArraySize, MPI_INT, 0, MPI_COMM_WORLD);
 
         MPI_Bcast(&possibleMovesIndexCounter, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        
-        int numProc;
-        MPI_Comm_size(MPI_COMM_WORLD, &numProc);
 
         turn = Black;
 
         int chunkSize = possibleMovesIndexCounter/numProc;
         int start = rank*chunkSize;
         int end = start+(chunkSize-1);
-        if (rank == numProc)
+        if (rank == numProc-1)
         {
             end = possibleMovesIndexCounter;
         }
@@ -2003,6 +2001,7 @@ int main(int argc, char **argv)
     MPI_Barrier(MPI_COMM_WORLD);
     
 }
+
 
 
 //###=====================     Exemplo de Reduce     =================================###
