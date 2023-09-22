@@ -1864,6 +1864,9 @@ int main(int argc, char **argv)
 
     while(True)
     {
+        possibleMovesIndexCounter = 0;
+        bestLocalScore = INT_MIN;
+        maxGlobalScore = -1000000;
         if(rank == 0)
         {
             int result;
@@ -1912,7 +1915,7 @@ int main(int argc, char **argv)
             }
         }
         
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
 
         int possibleMovementsArraySize = sizeof(possibleMovements)/sizeof(PossibleMovements);
         MPI_Bcast(&possibleMovements, possibleMovementsArraySize, MPI_INT, 0, MPI_COMM_WORLD);
@@ -1921,6 +1924,8 @@ int main(int argc, char **argv)
         MPI_Bcast(&board, boardArraySize, MPI_INT, 0, MPI_COMM_WORLD);
 
         MPI_Bcast(&possibleMovesIndexCounter, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        //MPI_Barrier(MPI_COMM_WORLD);
 
         turn = Black;
 
@@ -1946,7 +1951,7 @@ int main(int argc, char **argv)
             }
         }
 
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
 
         
 
