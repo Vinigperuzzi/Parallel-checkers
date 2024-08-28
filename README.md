@@ -1,7 +1,9 @@
 # IPPD (Introdução ao processamento paralelo e distribuído)
 
 This repository has been created to contain the project of the IPPD class in the course of computing science in UFPel. <br>
-This project is proposed by professor Gerson Cavalheiro and developed by the students Allan N. Schuch andf Vinícius G Peruzzi.
+This project is proposed by professor Gerson Cavalheiro and developed by the students Allan N. Schuch and Vinícius G Peruzzi.
+
+It is a game of checkers parallel with openmp and distributed with MPI, enjoy.
 
 # How to run the project
 
