@@ -7,9 +7,7 @@ It is a game of checkers parallel with openmp and distributed with MPI, enjoy.
 
 # How to run the project
 
-By yourself or automatically:
-
-By yourself:
+### By yourself:
 
 All you need is python in a version that has pip, or at least have pip installed aside.<br>
 For more compatibility we recommend set the python version for 3.11.0, although python is backwards compatible.
@@ -28,7 +26,7 @@ And then run the Chekers.py:
 
 # ------------------------------------------------------------
 
-Automatically:
+### Automatically:
 If you do not have python installed and do not have de knowledge to setup the environment, we have a bash.sh file that do it for you. <br>
 
 All you have to do is two simple commands:
@@ -53,3 +51,16 @@ Now the setup is ready for the command >python Checkers.py<br><br>
 ATENTION: The command deactivate set venv back to global;<br>
     If you need to remove the .so lib, you can run >make clean.<br>
     If you want to go back to a especified python version you can run >pyenv global [$version]
+
+
+### With docker
+
+There's a Dockerfile to be build with docker compose, so you can run it using it.
+Note that it uses an Graphics interface, so it will not be a simple comando to run the container i nthe right way. But, there's is two bashes that run the project using docker. You can simple run these two commands:
+
+>chmod +x bin/stop
+>bin/run
+
+To stop you can do the same for bin/stop bash
+
+Note that if you are using docker in a version older than 2.0, the syntax will not work with docker compose, so you may alter it to docker-compose, or simple copy/paste from bin/stop directly to you terminal.
