@@ -36,7 +36,7 @@ All you have to do is two simple commands:
 
 The first one is to set permission to run as program and the second is to run it, just like ./bash.sh, but with source you force the changes to occur in the open terminal.<br>
 
-# What this bash.sh does?
+##### What this bash.sh does?
 This bash will install a lot of stuff.<br>
 The .sh itself will explain what it does, but simply:<br>
 1 - Check if pyenv is installed. If not, update/upgrade apt, install dependencies for pyenv and install pyenv;<br>
@@ -52,6 +52,8 @@ ATENTION: The command deactivate set venv back to global;<br>
     If you need to remove the .so lib, you can run >make clean.<br>
     If you want to go back to a especified python version you can run >pyenv global [$version]
 
+
+# ------------------------------------------------------------
 
 ### With docker
 
