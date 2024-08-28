@@ -50,7 +50,7 @@ Now the setup is ready for the command >python Checkers.py<br><br>
 
 ATENTION: The command deactivate set venv back to global;<br>
     If you need to remove the .so lib, you can run >make clean.<br>
-    If you want to go back to a especified python version you can run >pyenv global [$version]
+    If you want to go back to a specified python version you can run >pyenv global [$version]
 
 
 # ------------------------------------------------------------
@@ -58,9 +58,9 @@ ATENTION: The command deactivate set venv back to global;<br>
 ### With docker
 
 There's a Dockerfile to be build with docker compose, so you can run it using it.
-Note that it uses an Graphics interface, so it will not be a simple comando to run the container i nthe right way. But, there's is two bashes that run the project using docker. You can simple run these two commands:
+Note that it uses an Graphics interface, so it will not be a simple comando to run the container in the right way. But, there's is two bashes that run the project using docker. You can simple run these two commands:
 
->chmod +x bin/stop
+>chmod +x bin/stop<br>
 >bin/run
 
 To stop you can do the same for bin/stop bash
