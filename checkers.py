@@ -32,31 +32,8 @@ def start_game():
     print_board()
 
 def define_initial_pos():
-    print("Definir Posição Inicial")
     start_game()
-
-    firstMove = random.randint(1, 7)
-    if firstMove == 1:
-        board_pos[5][7-1] = 0
-        board_pos[4][7-0] = 2
-    if firstMove == 2:
-        board_pos[5][7-1] = 0
-        board_pos[4][7-2] = 2
-    if firstMove == 3:
-        board_pos[5][7-3] = 0
-        board_pos[4][7-2] = 2
-    if firstMove == 4:
-        board_pos[5][7-3] = 0
-        board_pos[4][7-4] = 2
-    if firstMove == 5:
-        board_pos[5][7-5] = 0
-        board_pos[4][7-4] = 2
-    if firstMove == 6:
-        board_pos[5][7-5] = 0
-        board_pos[4][7-6] = 2
-    if firstMove == 7:
-        board_pos[5][7-7] = 0
-        board_pos[4][7-6] = 2
+    b.define_initial_pos(board_pos)
     print_board()
 
 def submit_move():
@@ -153,6 +130,49 @@ def print_board():
                 label_piece.pack(pady=0)
                 label_piece.bind("<Button-1>", print_coordinates)
 
+# Function that creates the colored squares and sets png for pieces
+def create_square(row, col):
+    square_color = color_secondary if (row + col) % 2 == 0 else color_black_squares
+    square = tk.Frame(board, width=67, height=67, bg=square_color)
+    square.grid(row=row, column=col)
+    square.bind("<Button-1>", print_coordinates)  # Add click event to each square
+
+def get_selected_difficulty():
+    global difficulty_var
+    selected_difficulty = int(difficulty_spinbox.get())
+    selected_difficulty_label.config(text=f"Dificuldade selecionada: {selected_difficulty}")
+    difficulty_var = selected_difficulty
+
+def get_selected_difficulty_manually(condition):
+    global difficulty_var
+    if condition == 1:
+        difficulty_var += 1
+    else:
+        difficulty_var -= 1
+    selected_difficulty_label.config(text=f"Dificuldade selecionada: {difficulty_var}")
+
+def on_key(event):
+    if event.keysym in ["Return", "space"]:
+        submit_move()
+    if event.keysym in ["Escape"]:
+        drop_move()
+    if event.keysym in ["r", "R"]:
+        start_game()
+
+def on_arrow_up(event):
+    global difficulty_var
+    if difficulty_var < 15:
+        get_selected_difficulty_manually(1)
+        difficulty_spinbox.configure(textvariable=difficulty_var)   
+
+def on_arrow_down(event):
+    global difficulty_var
+    if difficulty_var > 2:
+        get_selected_difficulty_manually(0)
+        difficulty_spinbox.configure(textvariable=difficulty_var)   
+
+
+
 # Creation of matrice 8x8 board position
 board_pos = [[0 for _ in range(8)] for _ in range(8)]
 board_pos_show = [[0 for _ in range(8)] for _ in range(8)]
@@ -200,52 +220,10 @@ label_background.place(x=0, y=0, relwidth=1, relheight=1)
 board = ttk.LabelFrame(root, width=480, height=480, borderwidth=0, relief=tk.RAISED)
 board.grid(row=0, column=0, padx=150, pady=30)
 
-# Function that creates the colored squares and sets png for pieces
-def create_square(row, col):
-    square_color = color_secondary if (row + col) % 2 == 0 else color_black_squares
-    square = tk.Frame(board, width=67, height=67, bg=square_color)
-    square.grid(row=row, column=col)
-    square.bind("<Button-1>", print_coordinates)  # Add click event to each square
-
 # Create the board grid and squares
 for i in range(8):
     for j in range(8):
         create_square(i, j)
-
-def get_selected_difficulty():
-    global difficulty_var
-    selected_difficulty = int(difficulty_spinbox.get())
-    selected_difficulty_label.config(text=f"Dificuldade selecionada: {selected_difficulty}")
-    difficulty_var = selected_difficulty
-    #print(difficulty_var)
-
-def get_selected_difficulty_manually(condition):
-    global difficulty_var
-    if condition == 1:
-        difficulty_var += 1
-    else:
-        difficulty_var -= 1
-    selected_difficulty_label.config(text=f"Dificuldade selecionada: {difficulty_var}")
-
-def on_key(event):
-    if event.keysym in ["Return", "space"]:
-        submit_move()
-    if event.keysym in ["Escape"]:
-        drop_move()
-    if event.keysym in ["r", "R"]:
-        start_game()
-
-def on_arrow_up(event):
-    global difficulty_var
-    if difficulty_var < 15:
-        get_selected_difficulty_manually(1)
-        difficulty_spinbox.configure(textvariable=difficulty_var)   
-
-def on_arrow_down(event):
-    global difficulty_var
-    if difficulty_var > 2:
-        get_selected_difficulty_manually(0)
-        difficulty_spinbox.configure(textvariable=difficulty_var)   
 
 # New label to display the current status of the move
 status_label = tk.Label(board, text="Faça sua jogada", font=("Arial", 14, "bold"), bg=color_primary, fg="black")
@@ -266,13 +244,11 @@ difficulty_label = tk.Label(menu, text="Dificuldade:", font=("Arial", 12, "bold"
 difficulty_label.pack(pady=10)
 
 difficulty_spinbox = tk.Spinbox(menu, from_=2, to=15, font=("Arial", 12), width=10)
-#difficulty_spinbox.set(2)  # Define a dificuldade inicial como 2
 difficulty_spinbox.pack(pady=5)
 
 selected_difficulty_label = tk.Label(menu, text="", font=("Arial", 12), bg=color_secondary)
 selected_difficulty_label.pack()
 selected_difficulty_label.config(text=f"Dificuldade selecionada: {2}")
-
 
 difficulty_button = tk.Button(menu, text="Definir Dificuldade", bg=color_submeter_button, fg="white", font=("Arial", 12, "bold"), command=get_selected_difficulty, relief=tk.RAISED, borderwidth=5)
 difficulty_button.pack(pady=10, padx=20, ipadx=10)
@@ -286,7 +262,6 @@ btn_submeter.grid(row=1, column=0, columnspan=2, pady=0)
 
 btn_info = tk.Button(root, text="?", font=("Arial", 14, "bold"), bg=color_sair_button, fg=color_submeter_button, command=ih.show_information_popup)
 btn_info.grid(row=8, column=10, padx=10, pady=(0, 10))   
-
 
 root.bind("<Key>", on_key)
 root.bind("<Up>", on_arrow_up)
