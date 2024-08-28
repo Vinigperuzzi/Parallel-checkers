@@ -136,25 +136,25 @@ def submit_move():
     test = entry_point()
     if test[4] == 0:
         status_label.config(text="Jogada inválida", fg="red")  # Update the status label text
-        path_to_audio = os.path.join(path_project, "Invalid.mp3")
+        path_to_audio = os.path.join(path_project, "audio/Invalid.mp3")
         play_audio(path_to_audio)
     elif test[4] == 1:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
-        path_to_audio = os.path.join(path_project, "Move.wav")
+        path_to_audio = os.path.join(path_project, "audio/Move.wav")
         play_audio(path_to_audio)
     elif test[4] == 2:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
-        path_to_audio = os.path.join(path_project, "Attack.wav")
+        path_to_audio = os.path.join(path_project, "audio/Attack.wav")
         play_audio(path_to_audio)
     elif test[4] == 3:
         set_end_board(test[4])
         status_label.config(text="Brancas ganharam", fg="blue")  # Update the status label text
-        path_to_audio = os.path.join(path_project, "end.mp3")
+        path_to_audio = os.path.join(path_project, "audio/end.mp3")
         play_audio(path_to_audio)
     elif test[4] == 4:
         set_end_board(test[4])
         status_label.config(text="Negras ganharam", fg="blue")  # Update the status label text
-        path_to_audio = os.path.join(path_project, "end.mp3")
+        path_to_audio = os.path.join(path_project, "audio/end.mp3")
         play_audio(path_to_audio)
     else:
         status_label.config(text=f"Jogada da máquina: {format_moves_to_string(test)}", fg="green")
@@ -190,11 +190,12 @@ def print_coordinates(event):
 
 # Function that create the colored squares and set png for pieces
 pieces_size = 63
+pieces_path = path_project + '/img'
 pieces = {
-    "black_piece": Image.open(os.path.join(path_project, "black_piece.png")).resize((pieces_size, pieces_size)),
-    "white_piece": Image.open(os.path.join(path_project, "white_piece.png")).resize((pieces_size, pieces_size)),
-    "black_king": Image.open(os.path.join(path_project, "black_king.png")).resize((pieces_size, pieces_size)),
-    "white_king": Image.open(os.path.join(path_project, "white_king.png")).resize((pieces_size, pieces_size)),
+    "black_piece": Image.open(os.path.join(pieces_path, "black_piece.png")).resize((pieces_size, pieces_size)),
+    "white_piece": Image.open(os.path.join(pieces_path, "white_piece.png")).resize((pieces_size, pieces_size)),
+    "black_king": Image.open(os.path.join(pieces_path, "black_king.png")).resize((pieces_size, pieces_size)),
+    "white_king": Image.open(os.path.join(pieces_path, "white_king.png")).resize((pieces_size, pieces_size)),
 }
 def print_board():
     set_pos_show()
@@ -232,9 +233,10 @@ def print_board():
                 label_piece.bind("<Button-1>", print_coordinates)
 
 def play_audio(file_path):
-    pygame.mixer.init()
-    pygame.mixer.music.load(file_path)
-    pygame.mixer.music.play()
+    #pygame.mixer.init()
+    #pygame.mixer.music.load(file_path)
+    #pygame.mixer.music.play()
+    ...
 
 def entry_point():
     global board_pos, board_pos_send ,list_of_moves, qtd_moves, front_end_turn, difficulty_var
@@ -315,7 +317,7 @@ root.geometry("1366x768")
 root.configure(bg=color_primary)
 
 # Relative path to background image
-path_background = os.path.join(path_project, "fundo_damas.png")
+path_background = os.path.join(path_project, "img/fundo_damas.png")
 
 # Load background image
 background_image = Image.open(path_background)
@@ -465,7 +467,7 @@ MatrixRow = ctypes.c_int * 8
 MatrixType = MatrixRow * 8
 
 # Load lib.so
-path_to_library = os.path.join(path_project, "lib.so")
+path_to_library = os.path.join(path_project, "shared/lib.so")
 lib = ctypes.CDLL(path_to_library)
 
 #Define types to pass as arguments and the return (int mat[8][8], int qtd, int array[qtd])
