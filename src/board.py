@@ -19,8 +19,6 @@ def set_end_board(winner, board_pos):
             else:
                 board_pos[i][j] = 0
 
-# Initialization of the piece's positions
-# Setting white as 1
 def set_initial_pos(board_pos):
     for i in range(3):
         for j in range(8):
@@ -33,7 +31,6 @@ def set_initial_pos(board_pos):
         for j in range(8):
             board_pos[i][j] = 0
 
-    # Setting black as 2
     for i in range(5, 8):
         for j in range(8):
             if (i + j) % 2 == 1:
