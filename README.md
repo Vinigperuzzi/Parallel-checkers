@@ -60,7 +60,7 @@ ATENTION: The command deactivate set venv back to global;<br>
 There's a Dockerfile to be build with docker compose, so you can run it using it.
 Note that it uses an Graphics interface, so it will not be a simple comando to run the container in the right way. But, there's is two bashes that run the project using docker. You can simple run these two commands:
 
->chmod +x bin/stop<br>
+>chmod +x bin/run<br>
 >bin/run
 
 To stop you can do the same for bin/stop bash
